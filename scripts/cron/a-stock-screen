@@ -8,3 +8,6 @@ PYTHON=$PROJECT/.venv/bin/python
 35 15 * * 1-5  cd $PROJECT && $PYTHON -m py.screener --no-html > data/screen/cron.log 2>&1
 40 15 * * 1-5  cd $PROJECT && $PYTHON -m py.screener --render-only >> data/screen/cron.log 2>&1
 45 15 * * 1-5  cd $PROJECT && $PYTHON -m py.brief --from-screener today --top-n 10 >> data/screen/cron.log 2>&1
+
+# 数据备份：每周日 23:00 (Asia/Shanghai)
+0 23 * * 0  cd $PROJECT && bash scripts/backup.sh >> data/screen/cron.log 2>&1
