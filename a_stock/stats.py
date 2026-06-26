@@ -2,8 +2,8 @@
 import argparse
 import sys
 from datetime import datetime, timedelta
-import py.config as cfg
-import py.db as db
+import a_stock.config as cfg
+import a_stock.db as db
 
 
 def _query(sql: str, params: tuple = ()) -> list:

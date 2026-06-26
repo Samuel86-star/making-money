@@ -3,7 +3,7 @@ import json
 import re
 import uuid
 
-from py.a_stock_data._common import em_get, UA
+from a_stock.a_stock_data._common import em_get, UA
 
 
 def eastmoney_stock_news(code: str, page_size: int = 20) -> list[dict]:

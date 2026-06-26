@@ -1,5 +1,5 @@
 import time
-from py.a_stock_data._common import (
+from a_stock.a_stock_data._common import (
     em_get, get_prefix, normalize_code, em_cache_get, em_cache_put, retry
 )
 

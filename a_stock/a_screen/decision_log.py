@@ -1,7 +1,7 @@
 """decisions 业务层包装。"""
 from datetime import datetime
-import py.db as db
-import py.config as cfg
+import a_stock.db as db
+import a_stock.config as cfg
 
 
 def add_buy(*, code, strategy, price, quantity, name=None, reason=None,

@@ -4,19 +4,19 @@ A daily A-stock screener and trading journal system. Scans 5300+ A-shares each t
 
 ## CLI Entry Points
 
-All CLI scripts live under `py/` and run via `python -m`:
+All CLI scripts live under `a_stock/` and run via `python -m`:
 
 ### 1. Screener
 
 ```bash
 # Full scan (short + mid strategies)
-python -m py.screener --date 2026-06-25 --strategy both
+python -m a_stock.screener --date 2026-06-25 --strategy both
 
 # Re-render HTML from cached SQLite data (no network)
-python -m py.screener --date 2026-06-25 --render-only
+python -m a_stock.screener --date 2026-06-25 --render-only
 
 # Scan with a single strategy
-python -m py.screener --date 2026-06-25 --strategy mid
+python -m a_stock.screener --date 2026-06-25 --strategy mid
 ```
 
 Output: `data/screen/daily/YYYY-MM-DD/report.html` + `candidates_*.json` + `sectors.json`
@@ -25,13 +25,13 @@ Output: `data/screen/daily/YYYY-MM-DD/report.html` + `candidates_*.json` + `sect
 
 ```bash
 # Single stock brief
-python -m py.brief 000858
+python -m a_stock.brief 000858
 
 # Batch from latest screener candidates
-python -m py.brief --from-screener 2026-06-25 --top-n 10
+python -m a_stock.brief --from-screener 2026-06-25 --top-n 10
 
 # Custom date
-python -m py.brief 000858 --date 2026-06-20
+python -m a_stock.brief 000858 --date 2026-06-20
 ```
 
 Output: `data/screen/briefs/<code>/YYYY-MM-DD.json` and `YYYY-MM-DD.md`
@@ -40,25 +40,25 @@ Output: `data/screen/briefs/<code>/YYYY-MM-DD.json` and `YYYY-MM-DD.md`
 
 ```bash
 # Record a buy
-python -m py.log buy 000001 --strategy short --price 10 --qty 100 --reason "breakout"
+python -m a_stock.log buy 000001 --strategy short --price 10 --qty 100 --reason "breakout"
 
 # Interactive buy (detects brief, pre-fills price)
-python -m py.log buy 000858 --strategy short
+python -m a_stock.log buy 000858 --strategy short
 
 # Add to existing position
-python -m py.log add 000858 --strategy short --price 10.5 --qty 50
+python -m a_stock.log add 000858 --strategy short --price 10.5 --qty 50
 
 # Close a position
-python -m py.log close 1 --close-date 2026-07-01 --close-price 11 --close-reason target
+python -m a_stock.log close 1 --close-date 2026-07-01 --close-price 11 --close-reason target
 
 # Update plan parameters
-python -m py.log plan 1 --plan-target 12 --plan-stop 9
+python -m a_stock.log plan 1 --plan-target 12 --plan-stop 9
 
 # List open positions
-python -m py.log list --open
+python -m a_stock.log list --open
 
 # Show position details
-python -m py.log show 1
+python -m a_stock.log show 1
 ```
 
 Database: `data/decisions.sqlite`
@@ -67,50 +67,50 @@ Database: `data/decisions.sqlite`
 
 ```bash
 # Discipline report (last 90 days)
-python -m py.stats --discipline --window 90
+python -m a_stock.stats --discipline --window 90
 
 # Overall stats
-python -m py.stats
+python -m a_stock.stats
 
 # By strategy
-python -m py.stats --strategy short
+python -m a_stock.stats --strategy short
 
 # By stock code
-python -m py.stats --code 000858
+python -m a_stock.stats --code 000858
 ```
 
 ### Utility Scripts
 
 ```bash
 # Download 1-year OHLCV for all A-shares (via yfinance)
-python -m py.download-ohlcv
+python -m a_stock.download-ohlcv
 
 # Fetch A-share list from East Money
-python -m py.fetch-ashare-list
+python -m a_stock.fetch-ashare-list
 
 # Fetch trending stocks
-python -m py.fetch-trending
+python -m a_stock.fetch-trending
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│           Data Layer (py/a_stock_data)  │
+│           Data Layer (a_stock/a_stock_data)  │
 │  East Money API  ·  Tencent API        │
 │  THS hot reasons · Yahoo Finance       │
 │  Concept blocks  · Dragon & Tiger      │
 └──────────────┬──────────────────────────┘
                │
 ┌──────────────▼──────────────────────────┐
-│        Business Layer (py/a_screen)     │
+│        Business Layer (a_stock/a_screen)     │
 │  sector_scan  ·  candidate_filter       │
 │  scoring  ·  brief_builder              │
 │  snapshot  ·  decision_log              │
 └──────────────┬──────────────────────────┘
                │
 ┌──────────────▼──────────────────────────┐
-│          CLI Layer (py/*.py)            │
+│          CLI Layer (a_stock/*.py)            │
 │  screener  ·  brief  ·  log  ·  stats  │
 │  cron scripts (scripts/cron/)           │
 └─────────────────────────────────────────┘
@@ -120,7 +120,7 @@ python -m py.fetch-trending
 
 ```
 .
-├── py/
+├── a_stock/
 │   ├── a_stock_data/     # API wrappers (East Money, Tencent, THS, yfinance)
 │   ├── a_screen/         # Scoring, filtering, brief building, decision log
 │   ├── screener.py       # Main screener CLI
@@ -160,9 +160,9 @@ A `scripts/cron/a-stock-screen` file defines the daily schedule (Asia/Shanghai):
 
 | Time   | Task                              |
 |--------|-----------------------------------|
-| 15:35  | `py.screener` (scan + cache)      |
-| 15:40  | `py.screener --render-only`       |
-| 15:45  | `py.brief --from-screener`        |
+| 15:35  | `a_stock.screener` (scan + cache)      |
+| 15:40  | `a_stock.screener --render-only`       |
+| 15:45  | `a_stock.brief --from-screener`        |
 | Sun 23:00 | `scripts/backup.sh`            |
 
 ## Saver Tip
@@ -170,7 +170,7 @@ A `scripts/cron/a-stock-screen` file defines the daily schedule (Asia/Shanghai):
 Create a shell alias for daily use:
 
 ```bash
-alias spl='git -C /Users/maerun/Documents/Projects/make-money pull && cd /Users/maerun/Documents/Projects/make-money && python -m py.log list --open'
+alias spl='git -C /Users/maerun/Documents/Projects/make-money pull && cd /Users/maerun/Documents/Projects/make-money && python -m a_stock.log list --open'
 ```
 
 > **Disclaimer:** This project is for personal research and educational purposes only. It does not constitute investment advice. See `CLAUDE.md` for the analysis HTML files documentation.

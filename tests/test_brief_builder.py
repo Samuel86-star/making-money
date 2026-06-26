@@ -1,13 +1,13 @@
 from unittest.mock import patch
-from py.a_screen.brief_builder import build_snapshot, render_markdown
+from a_stock.a_screen.brief_builder import build_snapshot, render_markdown
 
 
 def test_build_snapshot_combines_sources():
-    with patch("py.a_screen.brief_builder.tencent_quote") as m_t, \
-         patch("py.a_screen.brief_builder.eastmoney_concept_blocks") as m_c, \
-         patch("py.a_screen.brief_builder.stock_fund_flow_120d") as m_f, \
-         patch("py.a_screen.brief_builder.eastmoney_reports") as m_r, \
-         patch("py.a_screen.brief_builder.ths_eps_forecast") as m_e:
+    with patch("a_stock.a_screen.brief_builder.tencent_quote") as m_t, \
+         patch("a_stock.a_screen.brief_builder.eastmoney_concept_blocks") as m_c, \
+         patch("a_stock.a_screen.brief_builder.stock_fund_flow_120d") as m_f, \
+         patch("a_stock.a_screen.brief_builder.eastmoney_reports") as m_r, \
+         patch("a_stock.a_screen.brief_builder.ths_eps_forecast") as m_e:
         m_t.return_value = {"000858": {"name": "五粮液", "price": 168.5, "pe_ttm": 22.5, "pb": 4.8, "mcap_yi": 6543, "industry": "白酒"}}
         m_c.return_value = {"industries": [{"name": "白酒"}], "concepts": [{"name": "消费"}], "regions": []}
         m_f.return_value = [{"date": "2026-06-20", "main": 1e8}]

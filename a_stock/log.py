@@ -3,10 +3,10 @@
 import argparse
 import sys
 from datetime import date, datetime
-import py.config as cfg
-import py.db as db
-from py.a_screen.decision_log import add_buy, add_add, close, update_plan, list_open, get
-from py.a_screen.snapshot import load_snapshot
+import a_stock.config as cfg
+import a_stock.db as db
+from a_stock.a_screen.decision_log import add_buy, add_add, close, update_plan, list_open, get
+from a_stock.a_screen.snapshot import load_snapshot
 
 
 def _auto_brief_path(code: str) -> str | None:

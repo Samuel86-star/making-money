@@ -1,7 +1,7 @@
 """AI 代理手递手集成测试：模拟从快照生成到 AI 分析注入的全流程。"""
-import py.config as cfg
-from py.a_screen.snapshot import save_snapshot, update_ai_analysis
-from py.a_screen.brief_builder import render_markdown
+import a_stock.config as cfg
+from a_stock.a_screen.snapshot import save_snapshot, update_ai_analysis
+from a_stock.a_screen.brief_builder import render_markdown
 
 
 def _mock_snapshot(code: str, date: str) -> dict:
@@ -47,7 +47,7 @@ def test_ai_handoff_placeholder_then_filled(tmp_path, monkeypatch):
     update_ai_analysis(code, date, ai_text)
 
     # 重新从磁盘加载，再渲染 — 此时 AI 段应填充
-    from py.a_screen.snapshot import load_snapshot
+    from a_stock.a_screen.snapshot import load_snapshot
     reloaded = load_snapshot(code, date)
     assert reloaded is not None
     assert reloaded["ai_analysis"] == ai_text

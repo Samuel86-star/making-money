@@ -1,11 +1,11 @@
 """单股 brief 数据组装 + markdown 渲染。"""
 from datetime import datetime
-from py.a_stock_data import (
+from a_stock.a_stock_data import (
     tencent_quote, eastmoney_concept_blocks, stock_fund_flow_120d,
     eastmoney_reports, ths_eps_forecast,
     ths_hot_reason,
 )
-import py.config as cfg
+import a_stock.config as cfg
 
 
 def build_snapshot(code: str, trade_date: str, trigger: str = "manual") -> dict:

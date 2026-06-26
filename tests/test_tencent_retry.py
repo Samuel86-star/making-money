@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from py.a_stock_data.tencent import tencent_quote
+from a_stock.a_stock_data.tencent import tencent_quote
 
 
 def _mock_resp(text: str):

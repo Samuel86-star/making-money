@@ -1,7 +1,7 @@
 """新浪财报三表（资产负债表／利润表／现金流量表）。"""
 import requests
 
-from py.a_stock_data._common import UA
+from a_stock.a_stock_data._common import UA
 
 
 def sina_financial_report(code: str, report_type: str = "lrb", num: int = 8) -> list[dict]:

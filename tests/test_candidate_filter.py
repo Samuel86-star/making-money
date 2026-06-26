@@ -1,4 +1,4 @@
-from py.a_screen.candidate_filter import initial_filter
+from a_stock.a_screen.candidate_filter import initial_filter
 
 
 def test_short_filter_picks_1_to_7_pct_gain():

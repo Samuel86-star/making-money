@@ -1,5 +1,5 @@
 """同花顺数据接口: 热点归因、一致预期EPS、北向资金实时流向。"""
-from py.a_stock_data._common import em_get
+from a_stock.a_stock_data._common import em_get
 
 import pandas as pd
 from io import StringIO

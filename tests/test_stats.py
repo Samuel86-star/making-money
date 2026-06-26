@@ -1,7 +1,7 @@
 """Tests for stats.py: overall, strategy, code, discipline queries."""
-import py.db as db
-import py.a_screen.decision_log as dl
-import py.stats as stats
+import a_stock.db as db
+import a_stock.a_screen.decision_log as dl
+import a_stock.stats as stats
 
 
 def setup_function(_):

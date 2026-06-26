@@ -6,11 +6,11 @@ import sys
 import time
 from datetime import datetime, date, timedelta
 from pathlib import Path
-import py.config as cfg
-import py.db as db
-from py.a_screen.sector_scan import scan_sectors
-from py.a_screen.candidate_filter import initial_filter, score_candidate
-from py.a_stock_data import (
+import a_stock.config as cfg
+import a_stock.db as db
+from a_stock.a_screen.sector_scan import scan_sectors
+from a_stock.a_screen.candidate_filter import initial_filter, score_candidate
+from a_stock.a_stock_data import (
     industry_comparison, ths_hot_reason, daily_dragon_tiger,
     tencent_quote, eastmoney_concept_blocks, stock_fund_flow_120d,
     eastmoney_reports,
@@ -22,7 +22,7 @@ PUSH2_CLIST = "https://push2.eastmoney.com/api/qt/clist/get"
 def fetch_market_stocks(top_n: int = 200) -> list[dict]:
     """Step 2:push2 clist 全市场。"""
     import requests
-    from py.a_stock_data._common import retry
+    from a_stock.a_stock_data._common import retry
     fs = "m:0+t:6+f:!50,m:0+t:80+f:!50,m:0+t:81+f:!50,m:0+t:82+f:!50"
     fields = "f12,f14,f2,f3,f62,f66,f72"
     url = (

@@ -1,7 +1,7 @@
 """东财数据层:研报列表/板块归属/资金流/龙虎榜。"""
 import json
 import time
-from py.a_stock_data._common import em_get, em_cache_get, em_cache_put, _cache_key
+from a_stock.a_stock_data._common import em_get, em_cache_get, em_cache_put, _cache_key
 
 # ── 2.1 个股研报列表 ─────────────────────────────────
 REPORTAPI_URL = "https://reportapi.eastmoney.com/report/list"
@@ -78,7 +78,7 @@ SLIST_URL = "https://push2.eastmoney.com/api/qt/stock/get"
 def eastmoney_concept_blocks(code: str) -> dict:
     """返回 {industries: [...], concepts: [...], regions: [...]}。"""
     secid_map = {"sh": "1.", "sz": "0.", "bj": "0."}
-    from py.a_stock_data._common import get_prefix
+    from a_stock.a_stock_data._common import get_prefix
     secid = secid_map[get_prefix(code)] + code
 
     cache_key = _cache_key(SLIST_URL, {"secid": secid})
@@ -110,7 +110,7 @@ FUND_FLOW_MIN_URL = "https://push2.eastmoney.com/api/qt/stock/fflow/kline/get"
 def eastmoney_fund_flow_minute(code: str) -> list[dict]:
     """返回 60 分钟级别资金流 dict 列表。"""
     secid_map = {"sh": "1.", "sz": "0.", "bj": "0."}
-    from py.a_stock_data._common import get_prefix
+    from a_stock.a_stock_data._common import get_prefix
     secid = secid_map[get_prefix(code)] + code
 
     params = {

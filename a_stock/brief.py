@@ -3,9 +3,9 @@
 import argparse
 import sys
 from datetime import date
-import py.config as cfg
-from py.a_screen.brief_builder import build_snapshot, render_markdown
-from py.a_screen.snapshot import save_snapshot, save_markdown, load_snapshot
+import a_stock.config as cfg
+from a_stock.a_screen.brief_builder import build_snapshot, render_markdown
+from a_stock.a_screen.snapshot import save_snapshot, save_markdown, load_snapshot
 
 
 def single(code: str, trade_date: str, force: bool, strategy: str | None):
@@ -25,7 +25,7 @@ def single(code: str, trade_date: str, force: bool, strategy: str | None):
 
 def batch_from_screener(trade_date: str, top_n: int):
     """从今日扫描的 top N 各策略自动生成。"""
-    import py.db as db
+    import a_stock.db as db
     db.init_screener_db()
     generated = 0
     with db.conn(cfg.SCREENER_DB) as c:

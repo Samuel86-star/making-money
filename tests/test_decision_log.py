@@ -1,6 +1,6 @@
-import py.db as db
-import py.a_screen.decision_log as dl
-import py.config as cfg
+import a_stock.db as db
+import a_stock.a_screen.decision_log as dl
+import a_stock.config as cfg
 
 
 def setup_function(_):

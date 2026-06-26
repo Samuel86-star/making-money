@@ -1,7 +1,7 @@
 """SQLite 封装:schema 初始化 + CRUD helper。"""
 import sqlite3
 from contextlib import contextmanager
-import py.config as cfg
+import a_stock.config as cfg
 
 DECISIONS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS decisions (

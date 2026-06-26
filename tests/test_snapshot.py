@@ -1,6 +1,6 @@
 import json
-import py.config as cfg
-from py.a_screen.snapshot import save_snapshot, load_snapshot, update_ai_analysis, save_markdown
+import a_stock.config as cfg
+from a_stock.a_screen.snapshot import save_snapshot, load_snapshot, update_ai_analysis, save_markdown
 
 
 def test_roundtrip(tmp_path, monkeypatch):

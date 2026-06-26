@@ -1,6 +1,6 @@
 """板块聚合:行业/概念/热点/龙虎榜。"""
 from typing import Any
-from py.a_stock_data import industry_comparison, ths_hot_reason, daily_dragon_tiger
+from a_stock.a_stock_data import industry_comparison, ths_hot_reason, daily_dragon_tiger
 
 
 def scan_sectors(trade_date: str) -> dict[str, Any]:

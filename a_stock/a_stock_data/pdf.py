@@ -2,7 +2,7 @@
 import re
 from pathlib import Path
 
-from py.a_stock_data._common import em_get, UA
+from a_stock.a_stock_data._common import em_get, UA
 
 
 PDF_TPL = "https://pdf.dfcfw.com/pdf/H3_{info_code}_1.pdf"

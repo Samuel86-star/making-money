@@ -1,7 +1,7 @@
 """Tests for py.db — SQLite wrappers."""
 import sqlite3
-import py.db as db
-import py.config as cfg
+import a_stock.db as db
+import a_stock.config as cfg
 
 
 def test_init_creates_tables():

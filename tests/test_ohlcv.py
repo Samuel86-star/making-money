@@ -1,5 +1,5 @@
 """Tests for py/ohlcv.py — parquet OHLCV loader."""
-import py.ohlcv as ohlcv
+import a_stock.ohlcv as ohlcv
 
 
 def test_load_ohlcv_existing():

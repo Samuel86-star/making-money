@@ -1,7 +1,7 @@
 """brief 快照读写。"""
 import json
 from pathlib import Path
-import py.config as cfg
+import a_stock.config as cfg
 
 
 def _path(code: str, date: str, ext: str = "json") -> Path:

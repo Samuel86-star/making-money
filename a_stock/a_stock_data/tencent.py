@@ -1,7 +1,7 @@
 """腾讯财经 API:PE/PB/市值/换手/涨跌停/指数/ETF。带 retry。"""
 import urllib.request
 
-from py.a_stock_data._common import get_prefix, retry
+from a_stock.a_stock_data._common import get_prefix, retry
 
 UA = "Mozilla/5.0"
 

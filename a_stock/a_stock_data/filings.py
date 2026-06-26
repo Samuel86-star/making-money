@@ -3,7 +3,7 @@ from datetime import datetime
 
 import requests
 
-from py.a_stock_data._common import UA
+from a_stock.a_stock_data._common import UA
 
 
 def _cninfo_ts_to_date(ts):

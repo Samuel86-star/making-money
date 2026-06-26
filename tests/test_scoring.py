@@ -1,5 +1,5 @@
-import py.config as cfg
-from py.a_screen.candidate_filter import score_candidate
+import a_stock.config as cfg
+from a_stock.a_screen.candidate_filter import score_candidate
 
 
 def test_short_score_in_range():

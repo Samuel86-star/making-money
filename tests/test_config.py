@@ -1,5 +1,5 @@
 from pathlib import Path
-import py.config as cfg
+import a_stock.config as cfg
 
 
 def test_paths_exist():

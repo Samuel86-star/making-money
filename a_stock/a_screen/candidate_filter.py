@@ -1,5 +1,5 @@
 """初筛 + 评分(短线/中线)。"""
-import py.config as cfg
+import a_stock.config as cfg
 
 
 def initial_filter(stocks: list[dict], strategy: str) -> list[dict]:

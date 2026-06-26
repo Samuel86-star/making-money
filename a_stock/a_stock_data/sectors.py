@@ -1,5 +1,5 @@
 """行业板块排名(东财)."""
-from py.a_stock_data._common import em_get
+from a_stock.a_stock_data._common import em_get
 
 
 def industry_comparison(top_n: int = 20) -> dict:

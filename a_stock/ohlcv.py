@@ -1,7 +1,7 @@
 """parquet OHLCV 数据读取。"""
 from pathlib import Path
 import pandas as pd
-import py.config as cfg
+import a_stock.config as cfg
 
 
 def load_ohlcv(code: str) -> pd.DataFrame:
