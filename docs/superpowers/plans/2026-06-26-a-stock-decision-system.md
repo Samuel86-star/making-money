@@ -754,7 +754,57 @@ def daily_dragon_tiger(trade_date: str | None = None, min_net_buy: float = None)
     return {"data": rows, "total": len(rows), "date": trade_date}
 ```
 
-- [ ] **Step 3:写 `py/a_stock_data/__init__.py`** 重导出
+- [ ] **Step 3:创建占位模块**(让 import 路径完整,后续 task 填充)
+
+```bash
+mkdir -p py/a_stock_data
+```
+
+每个文件用函数 stub 抛 NotImplementedError,让 import 成功但调用时显式 fail:
+
+`py/a_stock_data/ths.py`:
+```python
+def ths_hot_reason(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.5 填充")
+def ths_eps_forecast(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.5 填充")
+def hsgt_realtime(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.5 填充")
+```
+
+`py/a_stock_data/sectors.py`:
+```python
+def industry_comparison(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.6 填充")
+```
+
+`py/a_stock_data/news.py`:
+```python
+def eastmoney_stock_news(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.7 填充")
+def eastmoney_global_news(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.7 填充")
+```
+
+`py/a_stock_data/pdf.py`:
+```python
+def download_pdf(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.7 填充")
+```
+
+`py/a_stock_data/financials.py`:
+```python
+def sina_financial_report(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.7 填充")
+```
+
+`py/a_stock_data/filings.py`:
+```python
+def cninfo_announcements(*args, **kwargs):
+    raise NotImplementedError("在 Task 1.7 填充")
+```
+
+- [ ] **Step 4:写 `py/a_stock_data/__init__.py`** 重导出
 
 ```python
 """a-stock-data vendored helpers。"""
@@ -776,26 +826,6 @@ from py.a_stock_data.financials import sina_financial_report
 from py.a_stock_data.filings import cninfo_announcements
 
 __version__ = "1.0.0"
-```
-
-- [ ] **Step 4:创建空模块占位(后续 task 填充)**
-
-```bash
-touch py/a_stock_data/ths.py py/a_stock_data/sectors.py py/a_stock_data/news.py \
-      py/a_stock_data/pdf.py py/a_stock_data/financials.py py/a_stock_data/filings.py
-```
-
-每个文件用 `pass` + 函数存根(让 import 成功但调用时显式 fail):
-```python
-# py/a_stock_data/ths.py 等占位模块用此模式
-def ths_hot_reason(*args, **kwargs):
-    raise NotImplementedError("ths_hot_reason 在 Task 1.5 填充")
-
-def ths_eps_forecast(*args, **kwargs):
-    raise NotImplementedError("ths_eps_forecast 在 Task 1.5 填充")
-
-def hsgt_realtime(*args, **kwargs):
-    raise NotImplementedError("hsgt_realtime 在 Task 1.5 填充")
 ```
 
 - [ ] **Step 5:语法检查**
@@ -2020,8 +2050,8 @@ def fetch_market_stocks(top_n: int = 200) -> list[dict]:
     fields = "f12,f14,f2,f3,f62,f66,f72"
     url = (
         f"{PUSH2_CLIST}?pn=1&pz={top_n}&po=1&np=1"
-        "&ut=bd1d9ddb04089700cf9c27f6f7426281"
-        "&fltt=2&invt=2&fid=f62&fs={fs}&fields={fields}"
+        f"&ut=bd1d9ddb04089700cf9c27f6f7426281"
+        f"&fltt=2&invt=2&fid=f62&fs={fs}&fields={fields}"
     )
     headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"}
     r = requests.get(url, headers=headers, timeout=20)
@@ -2758,7 +2788,7 @@ def compute_overall(window_days: int | None = None) -> dict:
 
 def compute_by_strategy(strategy: str, window_days: int | None = None) -> dict:
     rows = [r for r in _closed_in_window(window_days) if r["strategy"] == strategy]
-    return compute_overall.__wrapped__() if False else _agg(rows)
+    return _agg(rows)
 
 
 def _agg(rows) -> dict:
