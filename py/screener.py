@@ -100,10 +100,44 @@ def run(trade_date: str, strategies: list[str], top_n: int, enrich_top: int, for
     sectors = scan_sectors(trade_date)
     print(f"行业 {len(sectors.get('industry', []))}, 热点 {len(sectors.get('hot', []))}, 龙虎榜 {len(sectors.get('dragon_tiger', []))}")
 
+    # 落盘 sector_history
+    for i, s in enumerate(sectors.get("industry", [])):
+        db.upsert_sector(
+            trade_date, "industry", s.get("name", ""),
+            change_pct=s.get("change_pct", 0),
+            net_flow=s.get("net_flow", 0),
+            leader_name=s.get("leader", ""),
+            leader_code="",
+            rank=i + 1,
+        )
+    for i, s in enumerate(sectors.get("concept", [])):
+        db.upsert_sector(
+            trade_date, "concept", s.get("name", ""),
+            change_pct=s.get("change_pct", 0),
+            net_flow=s.get("net_flow", 0),
+            leader_name=s.get("leader", ""),
+            leader_code="",
+            rank=i + 1,
+        )
+
     # Step 2:全市场
     print("  Step 2: 全市场 clist...", end=" ", flush=True)
-    raw = fetch_market_stocks(top_n=200)
+    raw = fetch_market_stocks(top_n=top_n)
     print(f"{len(raw)} 只")
+
+    # Step 2b:批量拉取 PE/市值,供中线初筛使用
+    if "mid" in strategies:
+        raw_codes = [s["code"] for s in raw]
+        try:
+            tq_all = tencent_quote(raw_codes)
+            for s in raw:
+                tq = tq_all.get(s["code"], {})
+                s["pe_ttm"] = tq.get("pe_ttm", 0)
+                s["pb"] = tq.get("pb", 0)
+                s["mcap_yi"] = tq.get("mcap_yi", 0)
+                s["turnover_pct"] = tq.get("turnover_pct", 0)
+        except Exception as e:
+            print(f"\n  ⚠ 批量估值拉取失败:{e}", file=sys.stderr)
 
     # Step 3:各策略初筛
     candidates_by_strategy = {}
