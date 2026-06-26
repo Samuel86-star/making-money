@@ -232,6 +232,9 @@ def render_html(trade_date: str):
         sectors = c.execute(
             "SELECT * FROM sector_history WHERE scan_date=? AND sector_type='industry' ORDER BY net_flow DESC LIMIT 15",
             (trade_date,)).fetchall()
+        concepts = c.execute(
+            "SELECT * FROM sector_history WHERE scan_date=? AND sector_type='concept' ORDER BY net_flow DESC LIMIT 15",
+            (trade_date,)).fetchall()
         short = c.execute(
             "SELECT * FROM candidate_history WHERE scan_date=? AND strategy='short' ORDER BY score DESC LIMIT 20",
             (trade_date,)).fetchall()
@@ -249,6 +252,13 @@ def render_html(trade_date: str):
 
     html.append("<h2>行业板块资金流 TOP15</h2><table><tr><th>行业</th><th>涨跌幅</th><th>净流入(亿)</th><th>领涨股</th></tr>")
     for s in sectors:
+        nf = (s["net_flow"] or 0) / 1e8
+        html.append(f"<tr><td>{s['name']}</td><td>{s['change_pct']:+.2f}%</td>"
+                    f"<td>{nf:+.2f}</td><td>{s['leader_name'] or ''}</td></tr>")
+    html.append("</table>")
+
+    html.append("<h2>概念板块资金流 TOP15</h2><table><tr><th>概念</th><th>涨跌幅</th><th>净流入(亿)</th><th>领涨股</th></tr>")
+    for s in concepts:
         nf = (s["net_flow"] or 0) / 1e8
         html.append(f"<tr><td>{s['name']}</td><td>{s['change_pct']:+.2f}%</td>"
                     f"<td>{nf:+.2f}</td><td>{s['leader_name'] or ''}</td></tr>")
