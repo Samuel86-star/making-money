@@ -19,7 +19,7 @@ def cmd_buy(args):
     code = args.code
     # 简化模式 vs 显式
     if args.price is None:
-        return _interactive_buy(code, args.strategy, args.plan_max_pct)
+        return _interactive_buy(code, args.strategy, args.plan_max_position_pct)
 
     brief_path = args.from_brief or _auto_brief_path(code)
     new_id = add_buy(
@@ -27,7 +27,7 @@ def cmd_buy(args):
         price=args.price, quantity=args.qty,
         reason=args.reason, brief_snapshot_path=brief_path,
         plan_stop_loss=args.plan_stop_loss, plan_target=args.plan_target,
-        plan_hold_days=args.plan_hold_days, plan_max_position_pct=args.plan_max_pct,
+        plan_hold_days=args.plan_hold_days, plan_max_position_pct=args.plan_max_position_pct,
     )
     print(f"✓ 已记录 buy id={new_id}  brief={'已挂' if brief_path else '无'}")
 
