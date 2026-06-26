@@ -207,6 +207,11 @@ CREATE TABLE decisions (
     close_date      TEXT,
     close_price     REAL,
     close_reason    TEXT CHECK(close_reason IN ('stop_loss', 'target', 'manual', 'expired')),
+    -- close_reason 语义:
+    --   'stop_loss': 价格触发 plan_stop_loss 后平仓
+    --   'target':    价格触发 plan_target 后平仓
+    --   'manual':    主动判断平仓(纪律统计里 'manual' + pnl>0 = 提前止盈, + pnl<0 = 恐慌止损)
+    --   'expired':   持有天数 > plan_hold_days × 1.5 仍未平,系统提示后人工确认平仓
     pnl_pct         REAL,                  -- (close_price - price) / price * 100
 
     created_at      TEXT DEFAULT (datetime('now')),
@@ -330,7 +335,7 @@ CREATE TABLE daily_summary (
 
 ### 改造点(只 3 处)
 
-1. `EM_MIN_INTERVAL` 默认 1.5s(批量场景友好,可通过 config 调到 1.0)
+1. `EM_MIN_INTERVAL` 默认 1.0s(`config.py` 可调到 1.5-2s 用于更深度的批量);enrichment top 100 × 4 端点 × 1.0s ≈ 7 分钟,在 screener 总预算 5-10 分钟内
 2. `em_get` 加本地 URL 缓存(`data/.cache/em/`,TTL 15 分钟)
 3. `tencent_quote` 加 retry(3 次 + 1s 间隔)
 
@@ -512,11 +517,13 @@ python py/stats.py --export csv > out.csv
 ### Cron(A股交易日 15:35-15:50)
 
 ```cron
-# Asia/Shanghai
+# Asia/Shanghai;周末与节假日不跑(A股不开市)
 35 15 * * 1-5  python3 py/screener.py --no-html > data/screen/cron.log 2>&1
 40 15 * * 1-5  python3 py/screener.py --render-only
 45 15 * * 1-5  python3 py/brief.py --from-screener today --top-n 10
 ```
+
+**`--top-n 10` 语义**:每个策略(top-n=10)各取 10 只,共 20 只 brief。周报/月报场景可加 `--top-n 20` 每个策略 20 只。
 
 ### 端到端时序
 
@@ -571,7 +578,7 @@ python py/stats.py --export csv > out.csv
 
 ### L2 集成测试(默认 skip,`-m integration` 启用)
 - `tests/integration/test_a_stock_data_smoke.py`:真发 1-2 端点
-- `tests/integration/test_em_get_throttle.py`:验证 1.5s 间隔
+- `tests/integration/test_em_get_throttle.py`:验证默认 1.0s 间隔生效;并验证调整 `EM_MIN_INTERVAL` 后生效
 - `tests/integration/test_screener_e2e.py`:单一 date 完整跑
 
 ### L3 冒烟(cron 部署前)
@@ -637,10 +644,12 @@ python py/stats.py --export csv > out.csv
 
 本设计有几处需要在实施时确认的细节(不阻塞实施):
 
-1. **`tencent_quote` 重试 backoff**:1s 还是指数退避
-2. **brief 自动生成的 top N**:暂定 10,可调
-3. **em_get cache 淘汰策略**:TTL 还是 LRU
-4. **discipline report 默认窗口**:近 30 天 / 近 90 天 / 全部
-5. **WLB 数据源**:本设计没纳入,后续看是否需要(中线基本面)
+1. **`tencent_quote` 重试 backoff**:1s 固定 vs 指数退避(1s/2s/4s)——实施时看稳定性决定
+2. **brief 自动生成的 top N**:默认每策略 10,`config.py` 可调
+3. **em_get cache 淘汰策略**:TTL 15 分钟硬过期,不做 LRU(每天重抓成本可接受)
+4. **discipline report 默认窗口**:默认近 90 天,`--window 30/90/180/all` 可选
+5. **WLB(委比/委差)数据源**:本设计没纳入,后续看是否需要(中线盘口信号)
+6. **节假日识别**:cron `1-5` 不区分节假日,实施时加 `data/screen/holidays.json` 跳过列表
+7. **失败告警渠道**:本设计只写 cron.log;邮件/微信推送留作后续
 
 实施时遇到具体场景再决定。
