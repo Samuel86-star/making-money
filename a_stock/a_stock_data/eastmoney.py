@@ -24,9 +24,12 @@ def eastmoney_reports(code: str, max_pages: int = 1) -> list[dict]:
         }
         r = em_get(REPORTAPI_URL, params=params, timeout=15)
         d = r.json()
-        if not d.get("data") or not d["data"].get("dataList"):
+        # 实际响应: d = {"hits": N, "data": [items...], "TotalPage": N, ...}
+        # d["data"] 是 list,不是 dict[dataList]
+        items = d.get("data", [])
+        if not items or not isinstance(items, list):
             break
-        for item in d["data"]["dataList"]:
+        for item in items:
             all_reports.append({
                 "title":       item.get("title", ""),
                 "org":         item.get("orgSName", ""),
@@ -57,9 +60,10 @@ def eastmoney_industry_reports(industry_code: str = "*", max_pages: int = 1) -> 
         }
         r = em_get(REPORTAPI_URL, params=params, timeout=15)
         d = r.json()
-        if not d.get("data") or not d["data"].get("dataList"):
+        items = d.get("data", [])
+        if not items or not isinstance(items, list):
             break
-        for item in d["data"]["dataList"]:
+        for item in items:
             all_reports.append({
                 "title":     item.get("title", ""),
                 "org":       item.get("orgSName", ""),
