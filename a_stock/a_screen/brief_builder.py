@@ -120,7 +120,7 @@ def render_markdown(snap: dict) -> str:
 
     md += f"""
 ## 5. 一致预期
-- {len(cons.get('eps_forecasts', []))} 家覆盖,首条:{cons['eps_forecasts'][0] if cons.get('eps_forecasts') else '无'}
+- {len(cons.get('eps_forecasts', []))} 年预测,首条:{cons['eps_forecasts'][0] if cons.get('eps_forecasts') else '无'}
 
 ## 6. 风险点
 """
