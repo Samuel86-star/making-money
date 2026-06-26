@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# DEPRECATED: 功能已并入 py/screener.py。本文件保留仅供历史参考。
+# 新功能不再加到这里。
 """A-Share EOD momentum screener — 尾盘选股分析
 
 Fetches A-share capital flow data from EastMoney push2 API (primary),
