@@ -12,7 +12,7 @@ def industry_comparison(top_n: int = 20) -> dict:
         "pn": "1", "pz": "100", "po": "1", "np": "1",
         "fltt": "2", "invt": "2",
         "fs": "m:90+t:2",
-        "fields": "f2,f3,f4,f12,f13,f14,f104,f105,f128,f136,f140,f141,f207",
+        "fields": "f2,f3,f4,f12,f13,f14,f62,f104,f105,f128,f136,f140,f141,f207",
     }
     headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
     r = em_get(url, params=params, headers=headers, timeout=15)
@@ -32,6 +32,7 @@ def industry_comparison(top_n: int = 20) -> dict:
             "down_count": item.get("f105", 0),
             "leader": item.get("f140", ""),
             "leader_change": item.get("f136", 0),
+            "net_flow": int(item.get("f62") or 0) * 10000,  # push2 万元→元
         })
 
     return {
