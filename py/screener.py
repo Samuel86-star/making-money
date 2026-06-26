@@ -22,6 +22,7 @@ PUSH2_CLIST = "https://push2.eastmoney.com/api/qt/clist/get"
 def fetch_market_stocks(top_n: int = 200) -> list[dict]:
     """Step 2:push2 clist 全市场。"""
     import requests
+    from py.a_stock_data._common import retry
     fs = "m:0+t:6+f:!50,m:0+t:80+f:!50,m:0+t:81+f:!50,m:0+t:82+f:!50"
     fields = "f12,f14,f2,f3,f62,f66,f72"
     url = (
