@@ -36,7 +36,7 @@ def _cache_key(url: str, params: dict | None) -> str:
     return hashlib.sha1(raw.encode()).hexdigest()
 
 def em_cache_get(key: str):
-    """读缓存:返回 (timestamp, data) 或 None。"""
+    """读缓存:返回缓存数据或 None(过期或不存在)。"""
     path = cfg.EM_CACHE_DIR / f"{key}.json"
     if not path.exists():
         return None
