@@ -14,7 +14,6 @@ def initial_filter(stocks: list[dict], strategy: str) -> list[dict]:
             s for s in stocks
             if 0 < s.get("pe_ttm", 0) <= 50
             and s.get("mcap_yi", 0) >= 50
-            and s.get("fund_flow_20d", 0) > 0
         ]
     return []
 
