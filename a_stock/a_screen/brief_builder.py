@@ -60,7 +60,8 @@ def build_snapshot(code: str, trade_date: str, trigger: str = "manual") -> dict:
             "turnover_pct": tq.get("turnover_pct", 0),
             "limit_up": tq.get("limit_up", 0),
             "limit_down": tq.get("limit_down", 0),
-            "industry": tq.get("industry", ""),
+            "industry": (blocks.get("industries", [{}])[0].get("name", "")
+                         if blocks.get("industries") else tq.get("industry", "")),
         },
         "membership": blocks,
         "fund_flow": {

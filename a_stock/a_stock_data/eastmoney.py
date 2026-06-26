@@ -82,7 +82,6 @@ SLIST_URL = "https://push2.eastmoney.com/api/qt/stock/get"
 def eastmoney_concept_blocks(code: str) -> dict:
     """返回 {industries: [...], concepts: [...], regions: [...]}。"""
     secid_map = {"sh": "1.", "sz": "0.", "bj": "0."}
-    from a_stock.a_stock_data._common import get_prefix
     secid = secid_map[get_prefix(code)] + code
 
     cache_key = _cache_key(SLIST_URL, {"secid": secid})
@@ -90,8 +89,9 @@ def eastmoney_concept_blocks(code: str) -> dict:
     if cached is not None:
         return cached
 
+    # 实际响应: f127=行业(如"白酒Ⅱ"), f128=地域, f129=概念(comma-separated)
     params = {
-        "fields": "f12,f14,f128,f136,f152",
+        "fields": "f12,f14,f127,f128,f129",
         "secid": secid,
         "_": str(int(time.time() * 1000)),
     }
@@ -99,11 +99,25 @@ def eastmoney_concept_blocks(code: str) -> dict:
     d = r.json().get("data", {})
 
     out = {"industries": [], "concepts": [], "regions": []}
-    if d.get("f128"):  # 行业板块代码
-        out["industries"].append({
-            "code": d["f128"], "name": d.get("f12", ""),
-        })
-    # 概念/地域需另调接口(SKILL.md 934-980 详述),简化先返回基础
+
+    # 行业
+    industry = d.get("f127", "")
+    if industry:
+        out["industries"].append({"name": industry})
+
+    # 地域
+    region = d.get("f128", "")
+    if region:
+        out["regions"].append({"name": region})
+
+    # 概念(comma-separated)
+    concepts_str = d.get("f129", "")
+    if concepts_str:
+        for c in concepts_str.split(","):
+            c = c.strip()
+            if c:
+                out["concepts"].append({"name": c})
+
     em_cache_put(cache_key, out)
     return out
 
