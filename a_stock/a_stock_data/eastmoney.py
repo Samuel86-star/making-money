@@ -1,7 +1,7 @@
 """东财数据层:研报列表/板块归属/资金流/龙虎榜。"""
 import json
 import time
-from a_stock.a_stock_data._common import em_get, em_cache_get, em_cache_put, _cache_key
+from a_stock.a_stock_data._common import em_get, em_cache_get, em_cache_put, _cache_key, get_prefix
 
 # ── 2.1 个股研报列表 ─────────────────────────────────
 REPORTAPI_URL = "https://reportapi.eastmoney.com/report/list"
@@ -133,37 +133,37 @@ def eastmoney_fund_flow_minute(code: str) -> list[dict]:
 
 
 # ── 4.5 120 日资金流 ─────────────────────────────────
-FUND_FLOW_120D_URL = "https://datacenter-web.eastmoney.com/api/data/v1/get"
+FFLOW_DAY_URL = "https://push2.eastmoney.com/api/qt/stock/fflow/kline/get"
 
 def stock_fund_flow_120d(code: str) -> list[dict]:
-    """日级 120 日资金流,返回 [{"date": "2026-06-25", "main": 123.45, ...}]。"""
-    cache_key = _cache_key(FUND_FLOW_120D_URL, {"code": code, "type": "120d"})
-    cached = em_cache_get(cache_key)
-    if cached is not None:
-        return cached
+    """日级 120 日资金流,返回 [{"date": "YYYY-MM-DD", "main": x, "large": y, "small": z}]。"""
+    secid_map = {"sh": "1.", "sz": "0.", "bj": "0."}
+    secid = secid_map[get_prefix(code)] + code
 
     params = {
-        "reportName": "RPT_MUTUAL_STOCK_HOLDRANKS",
-        "columns": "ALL",
-        "filter": f'(SECURITY_CODE="{code}")',
-        "pageNumber": "1", "pageSize": "120",
-        "sortColumns": "TRADE_DATE", "sortTypes": "-1",
-        "source": "WEB", "client": "WEB",
+        "fields": "f1,f2,f3,f7",
+        "secid": secid,
+        "klt": "101",   # 101 = daily K-line
+        "lmt": "120",   # 120 records
     }
-    r = em_get(FUND_FLOW_120D_URL, params=params, timeout=15)
-    d = r.json()
-    rows = d.get("result", {}).get("data", []) if d.get("result") else []
-    out = []
-    for row in rows:
-        out.append({
-            "date":   row.get("TRADE_DATE", "")[:10],
-            "main":   row.get("MAIN_NET_INFLOW", 0) or 0,
-            "large":  row.get("LARGE_NET_INFLOW", 0) or 0,
-            "medium": row.get("MEDIUM_NET_INFLOW", 0) or 0,
-            "small":  row.get("SMALL_NET_INFLOW", 0) or 0,
-        })
-    em_cache_put(cache_key, out)
-    return out
+    try:
+        r = em_get(FFLOW_DAY_URL, params=params, timeout=15)
+        d = r.json().get("data", {})
+        klines = d.get("klines", [])
+        out = []
+        for k in klines:
+            parts = k.split(",")
+            if len(parts) < 4:
+                continue
+            out.append({
+                "date":   parts[0],
+                "main":   float(parts[1] or 0),
+                "large":  float(parts[2] or 0),
+                "small":  float(parts[3] or 0),
+            })
+        return out
+    except Exception:
+        return []
 
 
 # ── 3.8 全市场龙虎榜 ─────────────────────────────────
