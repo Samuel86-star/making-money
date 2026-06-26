@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HBM 国产化设备链 · Deep Research Dossier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E14; --surface:#10141D; --surface-2:#161C2A; --surface-3:#1E2536;
+    --ink:#E8ECF4; --ink-2:#B8C0D0; --ink-muted:#7A8499; --line:#222A3C; --line-2:#2C3550;
+    --copper:#E8A864; --copper-dim:#A87943;
+    --signal:#7FE3B4; --signal-dim:#3F8A6A;
+    --amber:#F5C56C; --risk:#EF6B5E; --info:#7AB8FF;
+    --ev-strong:#7FE3B4; --ev-med:#F5C56C; --ev-weak:#7A8499;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.6;font-size:15px;-webkit-font-smoothing:antialiased;letter-spacing:.005em}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px}
+  a{color:var(--info);text-decoration:none;border-bottom:1px dotted rgba(122,184,255,.4)}
+  a:hover{border-bottom-style:solid}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;letter-spacing:-.01em}
+  .serif{font-family:"Instrument Serif","Cormorant Garamond",Georgia,serif;letter-spacing:-.01em}
+
+  /* ---- Topbar ---- */
+  .topbar{border-bottom:1px solid var(--line);padding:14px 0;font-size:12px;color:var(--ink-muted);letter-spacing:.12em;text-transform:uppercase}
+  .topbar .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .topbar .left{display:flex;gap:18px;align-items:center}
+  .topbar .dot{width:6px;height:6px;border-radius:50%;background:var(--copper);box-shadow:0 0 8px var(--copper);display:inline-block}
+
+  /* ---- Hero ---- */
+  .hero{padding:80px 0 64px;border-bottom:1px solid var(--line);position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;top:-200px;right:-200px;width:500px;height:500px;background:radial-gradient(circle,rgba(232,168,100,.06) 0%,transparent 70%);pointer-events:none}
+  .hero .wrap{display:grid;grid-template-columns:1.4fr 1fr;gap:64px;align-items:center}
+  .eyebrow{font-size:11px;letter-spacing:.22em;color:var(--copper);text-transform:uppercase;margin-bottom:24px;display:flex;gap:14px;align-items:center;font-weight:500}
+  .eyebrow .pipe{color:var(--line-2)}
+  h1{font-family:"Instrument Serif",serif;font-size:64px;line-height:1.02;font-weight:400;letter-spacing:-.02em;margin-bottom:24px}
+  h1 em{font-style:italic;color:var(--copper);font-weight:400}
+  h1 .amp{color:var(--ink-muted);font-style:italic;font-weight:300}
+  .lede{font-size:17px;color:var(--ink-2);line-height:1.55;max-width:560px;margin-bottom:32px}
+  .meta-row{display:flex;gap:28px;font-size:12px;color:var(--ink-muted);border-top:1px solid var(--line);padding-top:18px;letter-spacing:.05em}
+  .meta-row b{color:var(--ink);font-weight:500;display:block;font-size:13px;margin-bottom:2px}
+  .stack-art{position:relative;width:100%;aspect-ratio:1;max-width:380px;margin-left:auto}
+
+  /* ---- Section ---- */
+  section{padding:72px 0;border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:none}
+  .sec-num{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--copper);letter-spacing:.15em;margin-bottom:14px}
+  .sec-h{font-family:"Instrument Serif",serif;font-size:36px;font-weight:400;line-height:1.15;letter-spacing:-.015em;margin-bottom:14px;max-width:780px}
+  .sec-h em{color:var(--copper);font-style:italic}
+  .sec-sub{font-size:15px;color:var(--ink-2);line-height:1.55;max-width:680px;margin-bottom:48px}
+  .sec-h b{font-weight:400;color:var(--copper)}
+
+  /* ---- 01 System change ---- */
+  .thesis{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:32px 36px;margin-bottom:36px;position:relative}
+  .thesis::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--copper),var(--signal))}
+  .thesis p{font-size:16px;line-height:1.7;color:var(--ink)}
+  .thesis p+p{margin-top:14px}
+  .thesis .tag{display:inline-block;font-size:10px;letter-spacing:.15em;color:var(--copper);background:rgba(232,168,100,.1);border:1px solid rgba(232,168,100,.3);padding:3px 8px;margin-right:8px;border-radius:2px;text-transform:uppercase}
+  .triggers{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .trig{background:var(--surface);padding:22px 20px;position:relative}
+  .trig .n{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--copper);letter-spacing:.1em;margin-bottom:8px}
+  .trig .t{font-size:15px;font-weight:500;color:var(--ink);line-height:1.35;margin-bottom:8px}
+  .trig .d{font-size:12.5px;color:var(--ink-muted);line-height:1.5}
+
+  /* ---- 02 Scarce layers ---- */
+  .layers{background:var(--surface);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .layer{display:grid;grid-template-columns:60px 200px 1fr 280px 80px;gap:24px;align-items:center;padding:18px 28px;border-bottom:1px solid var(--line);transition:background .2s}
+  .layer:last-child{border-bottom:none}
+  .layer:hover{background:var(--surface-2)}
+  .layer .rank{font-family:"Instrument Serif",serif;font-size:36px;color:var(--copper);text-align:center;line-height:1}
+  .layer .name{font-size:14.5px;font-weight:500;color:var(--ink)}
+  .layer .name small{display:block;font-size:11px;color:var(--ink-muted);margin-top:3px;font-weight:400;letter-spacing:.04em}
+  .layer .bar-wrap{display:flex;flex-direction:column;gap:6px}
+  .layer .bar{height:6px;background:var(--surface-3);border-radius:1px;overflow:hidden;position:relative}
+  .layer .bar .overseas{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--risk),var(--amber))}
+  .layer .bar .domestic{position:absolute;right:0;top:0;bottom:0;background:var(--signal)}
+  .layer .bar-legend{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-muted);letter-spacing:.04em}
+  .layer .bar-legend .overseas-l{color:var(--risk)}
+  .layer .bar-legend .domestic-l{color:var(--signal)}
+  .layer .price{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2);text-align:right}
+  .layer .price b{color:var(--ink);font-weight:500}
+
+  /* ---- 03 Companies ---- */
+  .co-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .co{background:var(--surface);padding:26px 28px;position:relative;transition:background .2s}
+  .co:hover{background:var(--surface-2)}
+  .co-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px}
+  .co-name{font-size:18px;font-weight:500;color:var(--ink);line-height:1.2}
+  .co-name .code{display:block;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-muted);margin-top:4px;font-weight:400}
+  .ev-pill{font-size:10px;letter-spacing:.1em;padding:4px 9px;border-radius:2px;font-weight:500;text-transform:uppercase;white-space:nowrap}
+  .ev-strong{background:rgba(127,227,180,.1);color:var(--ev-strong);border:1px solid rgba(127,227,180,.3)}
+  .ev-med{background:rgba(245,197,108,.1);color:var(--ev-med);border:1px solid rgba(245,197,108,.3)}
+  .ev-weak{background:rgba(122,132,153,.1);color:var(--ev-weak);border:1px solid rgba(122,132,153,.3)}
+  .co-chokepoint{font-size:12.5px;color:var(--copper);margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .co-chokepoint b{color:var(--ink);font-weight:500;margin-right:6px}
+  .co-row{display:grid;grid-template-columns:90px 1fr;gap:14px;margin-bottom:8px;font-size:13px;line-height:1.5}
+  .co-row .k{color:var(--ink-muted);font-size:11.5px;letter-spacing:.04em}
+  .co-row .v{color:var(--ink-2)}
+  .co-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:12px}
+  .co-foot .risk{color:var(--risk);max-width:60%}
+  .co-foot .elast{font-family:"IBM Plex Mono",monospace;color:var(--copper)}
+
+  /* ---- 04 Order flow ---- */
+  .flow-stage{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:40px 32px;position:relative}
+  .flow-svg{width:100%;height:auto;display:block}
+  .flow-note{margin-top:24px;padding:18px 22px;background:var(--surface-2);border-left:3px solid var(--copper);font-size:13px;color:var(--ink-2);line-height:1.6;border-radius:0 2px 2px 0}
+  .flow-note b{color:var(--copper)}
+
+  /* ---- 05 Priority ---- */
+  .prio{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:2px;overflow:hidden;font-size:13.5px}
+  .prio thead{background:var(--surface-2)}
+  .prio th{padding:14px 18px;text-align:left;font-size:11px;letter-spacing:.12em;color:var(--ink-muted);font-weight:500;text-transform:uppercase;border-bottom:1px solid var(--line)}
+  .prio td{padding:16px 18px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:middle}
+  .prio tr:last-child td{border-bottom:none}
+  .prio tr:hover td{background:var(--surface-2)}
+  .prio .rk{font-family:"Instrument Serif",serif;font-size:24px;color:var(--copper);text-align:center;width:50px}
+  .prio .nm{color:var(--ink);font-weight:500}
+  .prio .nm small{display:block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-muted);font-weight:400;margin-top:2px}
+  .prio .stars{color:var(--copper);letter-spacing:1px;font-size:14px}
+  .prio .stars .d{color:var(--line-2)}
+
+  /* ---- 06 Risks ---- */
+  .risks{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .risk-card{background:var(--surface);padding:22px 24px;position:relative}
+  .risk-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--risk)}
+  .risk-card .scen{font-size:14.5px;font-weight:500;color:var(--ink);margin-bottom:8px;line-height:1.35}
+  .risk-card .imp{font-size:12.5px;color:var(--ink-muted);line-height:1.55}
+
+  /* ---- 07 Next moves ---- */
+  .moves{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:8px 0}
+  .move{display:grid;grid-template-columns:30px 200px 1fr 140px 140px;gap:20px;align-items:center;padding:16px 28px;border-bottom:1px solid var(--line);transition:background .15s}
+  .move:last-child{border-bottom:none}
+  .move:hover{background:var(--surface-2)}
+  .move .check{width:18px;height:18px;border:1px solid var(--line-2);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink-muted);font-family:"IBM Plex Mono",monospace}
+  .move .what{font-size:14px;color:var(--ink);font-weight:500}
+  .move .what small{display:block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-muted);font-weight:400;margin-top:2px}
+  .move .when{font-size:12px;color:var(--ink-muted);font-family:"IBM Plex Mono",monospace;letter-spacing:.02em}
+  .move .src{font-size:12px;color:var(--info)}
+
+  /* ---- Footer ---- */
+  footer{padding:60px 0 40px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-muted);line-height:1.7}
+  footer .wrap{display:grid;grid-template-columns:2fr 1fr;gap:48px}
+  footer h4{font-size:11px;letter-spacing:.15em;color:var(--ink);text-transform:uppercase;margin-bottom:14px;font-weight:500}
+  footer ul{list-style:none;padding:0}
+  footer li{padding:3px 0}
+  footer .disc{margin-top:24px;padding-top:20px;border-top:1px solid var(--line);font-size:11.5px;line-height:1.7;color:var(--ink-muted)}
+
+  /* ---- Reveal ---- */
+  body.anim-ready .reveal{opacity:0;transform:translateY(14px);transition:opacity .7s,transform .7s cubic-bezier(.2,.6,.2,1)}
+  body.anim-ready .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:900px){
+    .wrap{padding:0 20px}
+    .hero{padding:48px 0 40px}
+    .hero .wrap{grid-template-columns:1fr;gap:36px}
+    .stack-art{max-width:240px;margin:0}
+    h1{font-size:40px}
+    .sec-h{font-size:26px}
+    .triggers{grid-template-columns:1fr 1fr}
+    .layer{grid-template-columns:50px 1fr;gap:14px;padding:14px 18px}
+    .layer .bar-wrap{grid-column:1/-1}
+    .layer .price{grid-column:1/-1;text-align:left;border-top:1px dashed var(--line);padding-top:8px}
+    .co-grid{grid-template-columns:1fr}
+    .risks{grid-template-columns:1fr}
+    .move{grid-template-columns:1fr;gap:6px;padding:14px 18px}
+    footer .wrap{grid-template-columns:1fr;gap:24px}
+    .prio{font-size:12px}
+    .prio th,.prio td{padding:10px 8px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+    .reveal{opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="left">
+      <span><span class="dot"></span> DEEP-RESEARCH DOSSIER</span>
+      <span class="mono">2026·06·25</span>
+    </div>
+    <div>Serenity Methodology · 稀缺层 → 公司 → 证据</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">
+        <span>研究主题</span><span class="pipe">|</span>
+        <span>A 股 HBM 设备链</span><span class="pipe">|</span>
+        <span>截止 2026/06/25</span>
+      </div>
+      <h1>HBM <em>国产化</em>设备链：<br>谁在卡 <span class="amp">&</span> 谁能拿到单</h1>
+      <p class="lede">7 个稀缺层 / 6 家 A 股设备公司 / 1 条订单传导链 — 从 TSV 深孔到 KGD 测试，把每一层的国产化率、扩产难度、订单证据、估值消化逐条拆开。</p>
+      <div class="meta-row">
+        <div><b>主导驱动</b>HBM 国产化 + 大基金三期</div>
+        <div><b>扩产周期</b>18-24 个月</div>
+        <div><b>订单窗口</b>2025H2 – 2026H1</div>
+        <div><b>研究方法</b>Serenity 稀缺层定位</div>
+      </div>
+    </div>
+    <div class="stack-art" aria-hidden="true">
+      <svg viewBox="0 0 380 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+        <defs>
+          <linearGradient id="copper" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#F0BC78"/>
+            <stop offset="1" stop-color="#A87943"/>
+          </linearGradient>
+          <linearGradient id="copper-dim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#3A2D1E"/>
+            <stop offset="1" stop-color="#1A1409"/>
+          </linearGradient>
+          <linearGradient id="signal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7FE3B4" stop-opacity=".4"/>
+            <stop offset="1" stop-color="#7FE3B4" stop-opacity="0"/>
+          </linearGradient>
+          <filter id="glow"><feGaussianBlur stdDeviation="3"/></filter>
+        </defs>
+        <!-- 8 stacked HBM dies in isometric -->
+        <g transform="translate(190,210)">
+          <!-- base logic die (glowing copper) -->
+          <g transform="translate(0,120)">
+            <polygon points="-130,0 0,-50 130,0 0,50" fill="url(#copper)" opacity=".9"/>
+            <polygon points="-130,0 0,50 0,72 -130,22" fill="#5C3A1B"/>
+            <polygon points="130,0 0,50 0,72 130,22" fill="#3A2410"/>
+            <line x1="-130" y1="0" x2="0" y2="-50" stroke="#0B0E14" stroke-width="1.5" opacity=".6"/>
+            <line x1="0" y1="-50" x2="130" y2="0" stroke="#0B0E14" stroke-width="1.5" opacity=".6"/>
+            <line x1="130" y1="0" x2="0" y2="50" stroke="#0B0E14" stroke-width="1.5" opacity=".6"/>
+          </g>
+          <!-- 8 stacked HBM dies, each slightly offset and glowing -->
+          <g opacity=".95">
+            <g transform="translate(0,90)">
+              <polygon points="-115,0 0,-44 115,0 0,44" fill="#1E2536" stroke="url(#copper)" stroke-width=".7"/>
+              <line x1="-115" y1="0" x2="0" y2="-44" stroke="#222A3C" stroke-width=".6"/>
+              <line x1="0" y1="-44" x2="115" y2="0" stroke="#222A3C" stroke-width=".6"/>
+            </g>
+            <g transform="translate(0,60)">
+              <polygon points="-100,0 0,-38 100,0 0,38" fill="#1A2030" stroke="url(#copper)" stroke-width=".6"/>
+              <polygon points="-100,0 0,38 0,52 -100,14" fill="#0F1320"/>
+            </g>
+            <g transform="translate(0,32)">
+              <polygon points="-86,0 0,-32 86,0 0,32" fill="#171D2A" stroke="url(#copper)" stroke-width=".5"/>
+              <polygon points="-86,0 0,32 0,44 -86,12" fill="#0D111C"/>
+            </g>
+            <g transform="translate(0,6)">
+              <polygon points="-72,0 0,-28 72,0 0,28" fill="#141A26" stroke="url(#copper)" stroke-width=".5"/>
+              <polygon points="-72,0 0,28 0,38 -72,10" fill="#0B0F18"/>
+            </g>
+            <g transform="translate(0,-18)">
+              <polygon points="-58,0 0,-22 58,0 0,22" fill="#11172222"/>
+              <polygon points="-58,0 0,22 0,30 -58,8" fill="#0A0D15"/>
+            </g>
+            <g transform="translate(0,-40)">
+              <polygon points="-44,0 0,-17 44,0 0,17" fill="#0E141F"/>
+            </g>
+            <g transform="translate(0,-60)">
+              <polygon points="-32,0 0,-12 32,0 0,12" fill="#0C111B"/>
+            </g>
+            <g transform="translate(0,-78)">
+              <polygon points="-20,0 0,-8 20,0 0,8" fill="#0A0E16"/>
+            </g>
+          </g>
+          <!-- TSV vertical lines through stack -->
+          <g stroke="url(#signal)" stroke-width=".8" opacity=".5">
+            <line x1="-60" y1="-50" x2="-60" y2="50"/>
+            <line x1="-30" y1="-60" x2="-30" y2="60"/>
+            <line x1="0" y1="-70" x2="0" y2="70"/>
+            <line x1="30" y1="-60" x2="30" y2="60"/>
+            <line x1="60" y1="-50" x2="60" y2="50"/>
+          </g>
+          <!-- glow blob under base -->
+          <ellipse cx="0" cy="135" rx="140" ry="14" fill="#E8A864" opacity=".15" filter="url(#glow)"/>
+          <!-- labels -->
+          <g font-family="IBM Plex Mono, monospace" font-size="9" fill="#7A8499" letter-spacing=".1em">
+            <text x="-150" y="148" text-anchor="end">LOGIC DIE</text>
+            <text x="150" y="148">×8 HBM</text>
+            <text x="-150" y="-90" text-anchor="end">TSV</text>
+            <text x="150" y="-90" text-anchor="end">键合</text>
+          </g>
+        </g>
+        <!-- corner ticks -->
+        <g stroke="#222A3C" stroke-width="1">
+          <line x1="14" y1="14" x2="28" y2="14"/><line x1="14" y1="14" x2="14" y2="28"/>
+          <line x1="366" y1="14" x2="352" y2="14"/><line x1="366" y1="14" x2="366" y2="28"/>
+          <line x1="14" y1="366" x2="28" y2="366"/><line x1="14" y1="366" x2="14" y2="352"/>
+          <line x1="366" y1="366" x2="352" y2="366"/><line x1="366" y1="366" x2="366" y2="352"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<!-- 01 SYSTEM CHANGE -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">01 — 系统变化</div>
+    <h2 class="sec-h">HBM 国产化打开 <em>18 个月</em> 的设备订单窗口</h2>
+    <p class="sec-sub">不是 GPU 的故事，是 GPU 周围 5 个隐形瓶颈同时松动 — 长鑫 HBM3 量产把"被卡"变成"被催"。</p>
+
+    <div class="thesis reveal">
+      <p><span class="tag">核心命题</span> HBM 制造比 DRAM 难 3-5 倍，单条 12 寸产线设备投资 <b style="color:var(--copper)">~$8B</b>，是普通 DRAM 线的 2-3 倍。设备订单 <em>先于</em> 产能落地 12-18 个月，意味着 <b style="color:var(--copper)">2025H2-2026 是订单密集兑现期</b>，2026-2027 是业绩兑现期，2027-2028 是 HBM4 第二波。</p>
+      <p>扩产卡的不是钱，是 <b style="color:var(--copper)">设备交付周期</b> 和 <b style="color:var(--copper)">国产替代窗口</b>。海外设备交付 18-24 月，国产 6-12 月，**长鑫要抢窗口，国产设备厂就有订单**。</p>
+    </div>
+
+    <div class="triggers">
+      <div class="trig"><div class="n">01</div><div class="t">长鑫 HBM3 量产</div><div class="d">2026 H1 量产 HBM3（行业预期），良率约 50%（估算）</div></div>
+      <div class="trig"><div class="n">02</div><div class="t">美对 HBM 出口管制</div><div class="d">SK 海力士/三星 HBM 对华出口收紧，国产替代被迫加速</div></div>
+      <div class="trig"><div class="n">03</div><div class="t">大基金三期投向</div><div class="d">2024 年 5 月注册，注册资本 3,440 亿元；重点投向 HBM / 先进封装 / 设备材料</div></div>
+      <div class="trig"><div class="n">04</div><div class="t">国产 GPU 配套需求</div><div class="d">昇腾 / 寒武纪 / 海光 必须配国产 HBM，否则就是空中楼阁</div></div>
+    </div>
+
+    <div class="thesis reveal" style="margin-top:28px">
+      <p><span class="tag">数据透明度</span> 本页数字按证据强度分为三类：<b style="color:var(--signal)">公开信息</b>（公司/交易所/官方公告原文）、<b style="color:var(--amber)">行业估算</b>（券商/产业调研/媒体综合，无单一权威来源）、<b style="color:var(--risk)">推测/待验证</b>（逻辑推演或单一信源，需后续公告确认）。具体标注见 <a href="#data-provenance">08 — 数据来源与勘误</a>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 02 SCARCE LAYERS -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">02 — 稀缺层</div>
+    <h2 class="sec-h">7 个 <em>卡点层</em>，国产化率从 &lt;2% 到 40%</h2>
+    <p class="sec-sub">按扩产难度排序：扩产周期越长、客户认证越严、供应商越少 = 卡点越紧。国产化率是结果，不是原因。</p>
+
+    <div class="layers reveal">
+      <div class="layer">
+        <div class="rank">01</div>
+        <div class="name">TSV 刻蚀<small>DEEP REACTIVE ION ETCH</small></div>
+        <div class="bar-wrap">
+          <div class="bar"><div class="overseas" style="width:95%"></div><div class="domestic" style="width:5%"></div></div>
+          <div class="bar-legend"><span class="overseas-l">海外 95%</span><span class="domestic-l">国产 5%</span></div>
+        </div>
+        <div class="price"><b>~$15M</b> / 台</div>
+        <div></div>
+      </div>
+      <div class="layer">
+        <div class="rank">02</div>
+        <div class="name">混合键合机<small>HYBRID BONDING</small></div>
+        <div class="bar-wrap">
+          <div class="bar"><div class="overseas" style="width:98%"></div><div class="domestic" style="width:2%"></div></div>
+          <div class="bar-legend"><span class="overseas-l">海外 98%</span><span class="domestic-l">国产 2%</span></div>
+        </div>
+        <div class="price"><b>~$20M</b> / 台</div>
+        <div></div>
+      </div>
+      <div class="layer">
+        <div class="rank">03</div>
+        <div class="name">CMP / 减薄<small>CHEMICAL MECHANICAL POLISH</small></div>
+        <div class="bar-wrap">
+          <div class="bar"><div class="overseas" style="width:72%"></div><div class="domestic" style="width:28%"></div></div>
+          <div class="bar-legend"><span class="overseas-l">海外 72%</span><span class="domestic-l">国产 28%</span></div>
+        </div>
+        <div class="price"><b>~$5M</b> / 台</div>
+        <div></div>
+      </div>
+      <div class="layer">
+        <div class="rank">04</div>
+        <div class="name">薄膜沉积<small>PECVD / ALD</small></div>
+        <div class="bar-wrap">
+          <div class="bar"><div class="overseas" style="width:62%"></div><div class="domestic" style="width:38%"></div></div>
+          <div class="bar-legend"><span class="overseas-l">海外 62%</span><span class="domestic-l">国产 38%</span></div>
+        </div>
+        <div class="price"><b>~$8M</b> / 台</div>
+        <div></div>
+      </div>
+      <div class="layer">
+        <div class="rank">05</div>
+        <div class="name">探针测试机<small>PROBE TEST</small></div>
+        <div class="bar-wrap">
+          <div class="bar"><div class="overseas" style="width:87%"></div><div class="domestic" style="width:13%"></div></div>
+          <div class="bar-legend"><span class="overseas-l">海外 87%</span><span class="domestic-l">国产 13%</span></div>
+        </div>
+        <div class="price"><b>~$3M</b> / 台</div>
+        <div></div>
+      </div>
+      <div class="layer">
+        <div class="rank">06</div>
+        <div class="name">涂胶显影<small>COAT / DEVELOP</small></div>
+        <div class="bar-wrap">
+          <div class="bar"><div class="overseas" style="width:82%"></div><div class="domestic" style="width:18%"></div></div>
+          <div class="bar-legend"><span class="overseas-l">海外 82%</span><span class="domestic-l">国产 18%</span></div>
+        </div>
+        <div class="price"><b>~$2M</b> / 台</div>
+        <div></div>
+      </div>
+      <div class="layer">
+        <div class="rank">07</div>
+        <div class="name">晶圆检测<small>AOI / DEFECT INSPECTION</small></div>
+        <div class="bar-wrap">
+          <div class="bar"><div class="overseas" style="width:91%"></div><div class="domestic" style="width:9%"></div></div>
+          <div class="bar-legend"><span class="overseas-l">海外 91%</span><span class="domestic-l">国产 9%</span></div>
+        </div>
+        <div class="price"><b>~$10M</b> / 台</div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 COMPANIES -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">03 — 公司图谱</div>
+    <h2 class="sec-h">6 家 A 股设备厂，<em>公告 + 业绩</em> 双重验证</h2>
+    <p class="sec-sub">按"卡点层 × 订单证据"双维排序。证据强度 = 公告原文（2026 H1 已发布）+ 业绩预告 / 报告 / 募资项目。</p>
+
+    <div class="co-grid">
+
+      <div class="co reveal">
+        <div class="co-head">
+          <div class="co-name">华海清科<span class="code">688120.SH · CMP / 减薄</span></div>
+          <span class="ev-pill ev-strong">● 强证据</span>
+        </div>
+        <div class="co-chokepoint"><b>卡点层</b> CMP 减薄 — HBM 制造 100% 需要</div>
+        <div class="co-row"><div class="k">已确认动作</div><div class="v">2026 年度定增 <b style="color:var(--copper)">已获上交所受理并进入审核问询回复阶段</b>（2026-06-24 回复审核问询函；06-23 披露预案二次修订稿），募投 CMP/减薄设备扩产</div></div>
+        <div class="co-row"><div class="k">财务快照</div><div class="v">2025 营收 46.48 亿元（+36.46%），归母净利 10.84 亿元（+5.89%），毛利率 41.81%，研发费用 5.37 亿元（+40.63%）；2026 Q1 营收 12.01 亿元（+31.66%），毛利率 42.31%</div></div>
+        <div class="co-row"><div class="k">IR 验证</div><div class="v">2026-04-24 IR 记录：<b style="color:var(--copper)">“公司部分先进制程 CMP 装备进入头部存储厂商 HBM 产线作为基线设备”</b>；2025-11-05 明确“针对性开发满足 HBM 等先进封装新需求的机型”</div></div>
+        <div class="co-row"><div class="k">客户</div><div class="v">长鑫存储 · 中芯国际 · 华虹 · 长江存储</div></div>
+        <div class="co-row"><div class="k">弹性来源</div><div class="v">国产化率 28%，是国产替代最快赛道；HBM 减薄设备单台价值 ~$5M</div></div>
+        <div class="co-foot">
+          <div class="risk">风险：估值 40-45x 已偏贵</div>
+          <div class="elast">弹性 ★★★★★</div>
+        </div>
+      </div>
+
+      <div class="co reveal">
+        <div class="co-head">
+          <div class="co-name">拓荆科技<span class="code">688072.SH · PECVD / ALD</span></div>
+          <span class="ev-pill ev-strong">● 强证据</span>
+        </div>
+        <div class="co-chokepoint"><b>卡点层</b> 薄膜沉积 — HBM 堆叠 TSV 侧壁 + 键合界面</div>
+        <div class="co-row"><div class="k">已确认动作</div><div class="v">2025 年度定增 <b style="color:var(--copper)">已完成</b>（2026-06-23 披露发行情况报告书、验资报告并签订募集资金专户存储协议；保荐 中信建投）</div></div>
+        <div class="co-row"><div class="k">财务快照</div><div class="v">2025 营收 65.19 亿元（+58.87%），归母净利 9.27 亿元（+34.67%），毛利率 34.95%，研发费用 7.70 亿元（+1.80%）；2026 Q1 营收 11.12 亿元（+56.97%），归母净利 5.71 亿元（+488.29%），毛利率 41.69%</div></div>
+        <div class="co-row"><div class="k">IR 验证</div><div class="v">2025-07-15 IR 记录：<b style="color:var(--copper)">“芯片对晶圆混合键合产品已获得客户订单并出货”</b>；“晶圆对晶圆键合产品已实现量产并获得复购订单”；三维集成领域先进键合设备是关键布局</div></div>
+        <div class="co-row"><div class="k">客户</div><div class="v">长鑫存储 · 长江存储 · 中芯 · 华虹</div></div>
+        <div class="co-row"><div class="k">弹性来源</div><div class="v">ALD 用于键合界面（200nm 精度），PECVD 用于 TSV 侧壁介质</div></div>
+        <div class="co-foot">
+          <div class="risk">风险：ALD 量产爬坡</div>
+          <div class="elast">弹性 ★★★★</div>
+        </div>
+      </div>
+
+      <div class="co reveal">
+        <div class="co-head">
+          <div class="co-name">长川科技<span class="code">300604.SZ · 数字测试机</span></div>
+          <span class="ev-pill ev-strong">● 强证据</span>
+        </div>
+        <div class="co-chokepoint"><b>卡点层</b> KGD 测试 — HBM 12 层 die 每层都要测</div>
+        <div class="co-row"><div class="k">已确认动作</div><div class="v"><b style="color:var(--copper)">2026 H1 业绩预告</b>已发布（2026-06-23）：归母净利润 9.0–10.0 亿元，同比 +110.76%–134.18%；扣非 8.55–9.55 亿元，同比 +139.38%–167.38%；数字测试机等多产品线销售大幅增长</div></div>
+        <div class="co-row"><div class="k">财务快照</div><div class="v">2025 营收 52.92 亿元（+45.31%），归母净利 13.31 亿元（+190.42%），毛利率 55.05%，研发费用 9.36 亿元（-3.19%）；2026 Q1 营收 13.78 亿元（+69.09%），归母净利 3.53 亿元（+217.60%），毛利率 56.81%</div></div>
+        <div class="co-row"><div class="k">IR 验证</div><div class="v">2025-05-28 IR 记录：业绩说明会，强调高端测试机、分选机自主技术及市场拓展，<b style="color:var(--ink-muted)">未直接提及 HBM</b>；需半年报/后续 IR 进一步确认 HBM 测试进展</div></div>
+        <div class="co-row"><div class="k">客户</div><div class="v">长鑫存储 · 华虹 · 中芯 · 长江存储</div></div>
+        <div class="co-row"><div class="k">弹性来源</div><div class="v">测试机占 HBM 产线设备投资 ~15%；国内份额 ~30%（仅次于爱德万）</div></div>
+        <div class="co-foot">
+          <div class="risk">风险：HBM 专用探针台待突破</div>
+          <div class="elast">弹性 ★★★★</div>
+        </div>
+      </div>
+
+      <div class="co reveal">
+        <div class="co-head">
+          <div class="co-name">北方华创<span class="code">002371.SZ · 刻蚀 / PVD / CVD</span></div>
+          <span class="ev-pill ev-med">● 中证据</span>
+        </div>
+        <div class="co-chokepoint"><b>卡点层</b> TSV 刻蚀（深宽比 50:1）— 集团军覆盖</div>
+        <div class="co-row"><div class="k">已确认动作</div><div class="v">2025 员工持股计划 <b style="color:var(--copper)">已完成股票购买</b>（2026-05-30 公告）；2026-06-23 董事会决议含放弃参股公司增资优先认购权暨关联交易</div></div>
+        <div class="co-row"><div class="k">财务快照</div><div class="v">2025 营收 393.53 亿元（+30.85%），归母净利 55.22 亿元（-1.77%），毛利率 40.10%，研发费用 54.35 亿元（+46.96%）；2026 Q1 营收 103.23 亿元（+25.80%），归母净利 16.35 亿元（+3.42%），毛利率 40.77%</div></div>
+        <div class="co-row"><div class="k">IR 验证</div><div class="v">2025-01-01 至 2026-06-25 期间未检索到投资者关系活动记录表；HBM 用 TSV 刻蚀进展需跟踪客户验证/招标公告</div></div>
+        <div class="co-row"><div class="k">客户</div><div class="v">中芯 · 华虹 · 长江存储 · 长鑫（间接）</div></div>
+        <div class="co-row"><div class="k">弹性来源</div><div class="v">国产刻蚀绝对龙头；TSV 深孔刻蚀是 2-3 年长期突破点</div></div>
+        <div class="co-foot">
+          <div class="risk">风险：HBM 专用刻蚀机出货未公开披露</div>
+          <div class="elast">弹性 ★★★</div>
+        </div>
+      </div>
+
+      <div class="co reveal">
+        <div class="co-head">
+          <div class="co-name">芯源微<span class="code">688037.SH · 涂胶显影</span></div>
+          <span class="ev-pill ev-med">● 中证据</span>
+        </div>
+        <div class="co-chokepoint"><b>卡点层</b> 涂胶显影 — HBM 12 层堆叠 × 12 次</div>
+        <div class="co-row"><div class="k">已确认动作</div><div class="v">2025 年报、2026 Q1 报告已披露；投资者关系活动记录持续更新（最新 2026-06-08 编号 2026-02）</div></div>
+        <div class="co-row"><div class="k">财务快照</div><div class="v">2025 营收 19.48 亿元（+11.11%），归母净利 0.72 亿元（-64.64%），毛利率 35.39%，研发费用 2.55 亿元（-14.21%）；2026 Q1 营收 3.31 亿元（+20.08%），归母净利 0.04 亿元（-24.70%），毛利率 46.69%</div></div>
+        <div class="co-row"><div class="k">IR 验证</div><div class="v">2026-06-08 IR 记录（编号 2026-02）：<b style="color:var(--copper)">“随着客户在 CoWoS、HBM 以及 3DIC 等领域的深化布局，公司后道产品也将持续受益”</b>；临时键合/解键合设备 2025 年收入占比大幅提升</div></div>
+        <div class="co-row"><div class="k">客户</div><div class="v">长鑫 · 中芯 · 华虹 · 长江存储</div></div>
+        <div class="co-row"><div class="k">弹性来源</div><div class="v">前道涂胶显影机已批量；HBM 专属需求是边际增量</div></div>
+        <div class="co-foot">
+          <div class="risk">风险：与 TEL 直接竞争</div>
+          <div class="elast">弹性 ★★★</div>
+        </div>
+      </div>
+
+      <div class="co reveal">
+        <div class="co-head">
+          <div class="co-name">精测电子<span class="code">300567.SZ · AOI 检测</span></div>
+          <span class="ev-pill ev-weak">● 弱证据</span>
+        </div>
+        <div class="co-chokepoint"><b>卡点层</b> AOI 光学检测 — HBM 堆叠对位精度</div>
+        <div class="co-row"><div class="k">已确认动作</div><div class="v">2026-06-11 披露 2026 年度跟踪评级报告；2026-06-23 限制性股票激励授予；HBM AOI 收入仍未单独披露</div></div>
+        <div class="co-row"><div class="k">财务快照</div><div class="v">2025 营收 33.48 亿元（+30.51%），归母净利 0.82 亿元（+184.04%），毛利率 46.73%，研发费用 8.12 亿元（+12.13%）；2026 Q1 营收 7.39 亿元（+7.26%），归母净利 0.43 亿元（+13.61%），毛利率 45.44%</div></div>
+        <div class="co-row"><div class="k">IR 验证</div><div class="v">2025-01-01 至 2026-06-25 期间未检索到投资者关系活动记录表；HBM AOI 收入仍未单独披露，需半年报确认</div></div>
+        <div class="co-row"><div class="k">客户</div><div class="v">长鑫 · 长江存储</div></div>
+        <div class="co-row"><div class="k">弹性来源</div><div class="v">HBM 堆叠对位精度 ±0.5μm，AOI 单台价值 ~$10M</div></div>
+        <div class="co-foot">
+          <div class="risk">风险：数据稀缺，需查 2026 半年报</div>
+          <div class="elast">弹性 ★★</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- 04 ORDER FLOW -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">04 — 订单传导</div>
+    <h2 class="sec-h">从 <em>SK 海力士涨价</em> 到 <em>设备厂业绩</em>，六步传导</h2>
+    <p class="sec-sub">每一环的延迟约 6-9 个月，2025H2 → 2026 → 2027 三年叠加。国产设备厂的业绩兑现窗口就在 2026Q2-Q3。</p>
+
+    <div class="flow-stage reveal">
+      <svg class="flow-svg" viewBox="0 0 1100 360" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#7A8499"/>
+          </marker>
+          <linearGradient id="trunk" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#E8A864" stop-opacity=".7"/>
+            <stop offset="1" stop-color="#7FE3B4" stop-opacity=".7"/>
+          </linearGradient>
+        </defs>
+
+        <!-- 6 nodes in a row -->
+        <g font-family="IBM Plex Sans, sans-serif" font-size="13">
+          <!-- node 1 -->
+          <g transform="translate(40,170)">
+            <rect x="0" y="-30" width="160" height="60" fill="#161C2A" stroke="#E8A864" stroke-width="1.2" rx="2"/>
+            <text x="80" y="-8" text-anchor="middle" fill="#E8A864" font-size="10" letter-spacing=".1em">2024-2025</text>
+            <text x="80" y="10" text-anchor="middle" fill="#E8ECF4" font-size="13" font-weight="500">SK 海力士 HBM 涨价</text>
+            <text x="80" y="25" text-anchor="middle" fill="#7A8499" font-size="11">+30%（估算）</text>
+          </g>
+          <!-- node 2 -->
+          <g transform="translate(220,170)">
+            <rect x="0" y="-30" width="160" height="60" fill="#161C2A" stroke="#E8A864" stroke-width="1.2" rx="2"/>
+            <text x="80" y="-8" text-anchor="middle" fill="#E8A864" font-size="10" letter-spacing=".1em">2025 H1</text>
+            <text x="80" y="10" text-anchor="middle" fill="#E8ECF4" font-size="13" font-weight="500">长鑫 HBM3 量产决策</text>
+            <text x="80" y="25" text-anchor="middle" fill="#7A8499" font-size="11">良率 ~50%（估算）</text>
+          </g>
+          <!-- node 3 -->
+          <g transform="translate(400,170)">
+            <rect x="0" y="-30" width="160" height="60" fill="#161C2A" stroke="#E8A864" stroke-width="1.2" rx="2"/>
+            <text x="80" y="-8" text-anchor="middle" fill="#E8A864" font-size="10" letter-spacing=".1em">2025 H2</text>
+            <text x="80" y="10" text-anchor="middle" fill="#E8ECF4" font-size="13" font-weight="500">长鑫资本开支上调</text>
+            <text x="80" y="25" text-anchor="middle" fill="#7A8499" font-size="11">+80% YoY（估算）</text>
+          </g>
+          <!-- node 4 -->
+          <g transform="translate(580,170)">
+            <rect x="0" y="-30" width="160" height="60" fill="#161C2A" stroke="#7FE3B4" stroke-width="1.2" rx="2"/>
+            <text x="80" y="-8" text-anchor="middle" fill="#7FE3B4" font-size="10" letter-spacing=".1em">2025 H2 - 2026 H1</text>
+            <text x="80" y="10" text-anchor="middle" fill="#E8ECF4" font-size="13" font-weight="500">国产设备厂订单激增</text>
+            <text x="80" y="25" text-anchor="middle" fill="#7A8499" font-size="11">华海/拓荆/长川 验证</text>
+          </g>
+          <!-- node 5 -->
+          <g transform="translate(760,170)">
+            <rect x="0" y="-30" width="160" height="60" fill="#161C2A" stroke="#7FE3B4" stroke-width="1.2" rx="2"/>
+            <text x="80" y="-8" text-anchor="middle" fill="#7FE3B4" font-size="10" letter-spacing=".1em">2026 Q2-Q3</text>
+            <text x="80" y="10" text-anchor="middle" fill="#E8ECF4" font-size="13" font-weight="500">设备厂业绩兑现</text>
+            <text x="80" y="25" text-anchor="middle" fill="#7A8499" font-size="11">半年报 / Q3 报告</text>
+          </g>
+          <!-- node 6 -->
+          <g transform="translate(940,170)">
+            <rect x="0" y="-30" width="140" height="60" fill="#161C2A" stroke="#7FE3B4" stroke-width="1.2" rx="2"/>
+            <text x="70" y="-8" text-anchor="middle" fill="#7FE3B4" font-size="10" letter-spacing=".1em">2026 至今</text>
+            <text x="70" y="10" text-anchor="middle" fill="#E8ECF4" font-size="13" font-weight="500">ETF 资金流入</text>
+            <text x="70" y="25" text-anchor="middle" fill="#7A8499" font-size="11">159319 设备 ETF</text>
+          </g>
+
+          <!-- arrows -->
+          <line x1="200" y1="170" x2="218" y2="170" stroke="#7A8499" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="380" y1="170" x2="398" y2="170" stroke="#7A8499" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="560" y1="170" x2="578" y2="170" stroke="#7A8499" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="740" y1="170" x2="758" y2="170" stroke="#7A8499" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="920" y1="170" x2="938" y2="170" stroke="#7A8499" stroke-width="1" marker-end="url(#arr)"/>
+
+          <!-- top labels (drivers) -->
+          <g font-family="IBM Plex Mono, monospace" font-size="10" fill="#7FE3B4" letter-spacing=".08em">
+            <text x="120" y="120" text-anchor="middle">需求端</text>
+            <text x="300" y="120" text-anchor="middle">决策端</text>
+            <text x="480" y="120" text-anchor="middle">资本端</text>
+            <text x="660" y="120" text-anchor="middle">设备端</text>
+            <text x="840" y="120" text-anchor="middle">业绩端</text>
+            <text x="1010" y="120" text-anchor="middle">资金端</text>
+          </g>
+          <g stroke="#222A3C" stroke-width="1" stroke-dasharray="2,3">
+            <line x1="60" y1="125" x2="180" y2="125"/>
+            <line x1="240" y1="125" x2="360" y2="125"/>
+            <line x1="420" y1="125" x2="540" y2="125"/>
+            <line x1="600" y1="125" x2="720" y2="125"/>
+            <line x1="780" y1="125" x2="900" y2="125"/>
+            <line x1="950" y1="125" x2="1070" y2="125"/>
+          </g>
+
+          <!-- 6 device companies feeding in below node 4 -->
+          <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#7A8499" letter-spacing=".04em">
+            <g transform="translate(420,260)">
+              <rect x="0" y="-12" width="110" height="24" fill="#10141D" stroke="#2C3550" stroke-width=".8" rx="1"/>
+              <text x="55" y="4" text-anchor="middle">华海清科</text>
+            </g>
+            <g transform="translate(540,260)">
+              <rect x="0" y="-12" width="100" height="24" fill="#10141D" stroke="#2C3550" stroke-width=".8" rx="1"/>
+              <text x="50" y="4" text-anchor="middle">拓荆科技</text>
+            </g>
+            <g transform="translate(650,260)">
+              <rect x="0" y="-12" width="100" height="24" fill="#10141D" stroke="#2C3550" stroke-width=".8" rx="1"/>
+              <text x="50" y="4" text-anchor="middle">长川科技</text>
+            </g>
+            <g transform="translate(420,300)">
+              <rect x="0" y="-12" width="110" height="24" fill="#10141D" stroke="#2C3550" stroke-width=".8" rx="1"/>
+              <text x="55" y="4" text-anchor="middle">北方华创</text>
+            </g>
+            <g transform="translate(540,300)">
+              <rect x="0" y="-12" width="100" height="24" fill="#10141D" stroke="#2C3550" stroke-width=".8" rx="1"/>
+              <text x="50" y="4" text-anchor="middle">芯源微</text>
+            </g>
+            <g transform="translate(650,300)">
+              <rect x="0" y="-12" width="100" height="24" fill="#10141D" stroke="#2C3550" stroke-width=".8" rx="1"/>
+              <text x="50" y="4" text-anchor="middle">精测电子</text>
+            </g>
+          </g>
+          <g stroke="#7FE3B4" stroke-width=".7" opacity=".5" stroke-dasharray="2,2">
+            <line x1="475" y1="248" x2="620" y2="200"/>
+            <line x1="590" y1="248" x2="640" y2="200"/>
+            <line x1="700" y1="248" x2="660" y2="200"/>
+            <line x1="475" y1="288" x2="640" y2="200"/>
+            <line x1="590" y1="288" x2="650" y2="200"/>
+            <line x1="700" y1="288" x2="670" y2="200"/>
+          </g>
+        </g>
+      </svg>
+
+      <div class="flow-note">
+        <b>关键节点：</b>2025 H2 长鑫设备招标密集期（预期）→ 2026 H1 国产设备厂收入兑现（待公告验证）→ 2026 H2 长鑫 HBM3 良率冲刺（估算）+ 设备验收/扩单 → 2027 长鑫 HBM4 启动 = 第二波设备订单。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 PRIORITY -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">05 — 优先级</div>
+    <h2 class="sec-h">研究优先级：<em>确定性 × 弹性</em> 矩阵</h2>
+    <p class="sec-sub">先看卡点层的国产化率，再看公司的订单证据，最后看估值消化。三者交集 = 真正值得下注的方向。</p>
+
+    <table class="prio reveal">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>公司</th>
+          <th>卡点层</th>
+          <th>证据</th>
+          <th>弹性</th>
+          <th>主要风险</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="rk">01</td>
+          <td class="nm">华海清科<small>688120.SH</small></td>
+          <td>CMP / 减薄</td>
+          <td><span class="ev-pill ev-strong">强</span></td>
+          <td><span class="stars">★★★★★</span></td>
+          <td>估值 40-45x 已贵</td>
+        </tr>
+        <tr>
+          <td class="rk">02</td>
+          <td class="nm">拓荆科技<small>688072.SH</small></td>
+          <td>PECVD / ALD</td>
+          <td><span class="ev-pill ev-strong">强</span></td>
+          <td><span class="stars">★★★★<span class="d">★</span></span></td>
+          <td>ALD 量产爬坡</td>
+        </tr>
+        <tr>
+          <td class="rk">03</td>
+          <td class="nm">长川科技<small>300604.SZ</small></td>
+          <td>数字测试机</td>
+          <td><span class="ev-pill ev-strong">强</span></td>
+          <td><span class="stars">★★★★<span class="d">★</span></span></td>
+          <td>HBM 专用探针台待突破</td>
+        </tr>
+        <tr>
+          <td class="rk">04</td>
+          <td class="nm">北方华创<small>002371.SZ</small></td>
+          <td>刻蚀 / PVD / CVD</td>
+          <td><span class="ev-pill ev-med">中</span></td>
+          <td><span class="stars">★★★<span class="d">★★</span></span></td>
+          <td>HBM 专用刻蚀机出货不透明</td>
+        </tr>
+        <tr>
+          <td class="rk">05</td>
+          <td class="nm">芯源微<small>688037.SH</small></td>
+          <td>涂胶显影</td>
+          <td><span class="ev-pill ev-med">中</span></td>
+          <td><span class="stars">★★★<span class="d">★★</span></span></td>
+          <td>与 TEL 直接竞争</td>
+        </tr>
+        <tr>
+          <td class="rk">06</td>
+          <td class="nm">精测电子<small>300567.SZ</small></td>
+          <td>AOI 检测</td>
+          <td><span class="ev-pill ev-weak">弱</span></td>
+          <td><span class="stars">★★<span class="d">★★★</span></span></td>
+          <td>数据稀缺，待查半年报</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 06 RISKS -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">06 — 反方风险</div>
+    <h2 class="sec-h">什么情景会让 <em>这个判断错</em></h2>
+    <p class="sec-sub">每一项反方情景都给"如果发生 → 后果"的因果链，方便快速评估。</p>
+
+    <div class="risks reveal">
+      <div class="risk-card">
+        <div class="scen">长鑫 HBM3 良率 &lt;30% 持续</div>
+        <div class="imp">设备订单延后 + 估值杀 20-30% + HBM 国产化时间表推到 2027-2028</div>
+      </div>
+      <div class="risk-card">
+        <div class="scen">美光 / SK 海力士 HBM 降价</div>
+        <div class="imp">长鑫资本开支下修 → 设备厂订单砍半 → 国产替代逻辑松动</div>
+      </div>
+      <div class="risk-card">
+        <div class="scen">大基金三期转向 EDA / IP</div>
+        <div class="imp">设备链资金分流 → 订单兑现节奏放缓 → 估值消化变长</div>
+      </div>
+      <div class="risk-card">
+        <div class="scen">ASML / AMAT 对华出口部分解禁</div>
+        <div class="imp">海外设备恢复供给 → 国产替代节奏放缓 → 国产设备厂估值杀</div>
+      </div>
+      <div class="risk-card">
+        <div class="scen">HBM 路线跳过 HBM3 直奔 HBM4</div>
+        <div class="imp">部分 HBM3 专用设备折旧加快 → 国产设备厂 HBM3 订单回款风险</div>
+      </div>
+      <div class="risk-card">
+        <div class="scen">海外云厂资本开支下修 &gt;10%</div>
+        <div class="imp">HBM 总需求收缩 → 长鑫订单被动下调 → 设备链 全链回调</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 NEXT MOVES -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">07 — 下一步验证</div>
+    <h2 class="sec-h">可执行的研究动作清单</h2>
+    <p class="sec-sub">每一项都给标的、时间窗、验证来源。清单逐条划掉 = 风险逐步释放。</p>
+
+    <div class="moves reveal">
+      <div class="move">
+        <div class="check">□</div>
+        <div class="what">2026 H1 业绩预告 <small>HBM 设备厂</small></div>
+        <div>华海清科 / 长川 / 芯源微 — 看收入 + 订单 + 毛利率</div>
+        <div class="when">2026·07 上旬</div>
+        <div class="src">巨潮资讯 / 公司公告</div>
+      </div>
+      <div class="move">
+        <div class="check">□</div>
+        <div class="what">长鑫存储 IPO 招股书 <small>设备采购清单</small></div>
+        <div>长鑫 HBM 设备供应商名册 + 采购金额 + 国产化率</div>
+        <div class="when">2026 H2 预期</div>
+        <div class="src">港交所 / 上交所</div>
+      </div>
+      <div class="move">
+        <div class="check">□</div>
+        <div class="what">长鑫设备招标跟踪 <small>北方华创 / 拓荆 / 华海</small></div>
+        <div>中标公告 + 中标金额 + 交付时间表</div>
+        <div class="when">持续</div>
+        <div class="src">中国招标投标公共服务平台</div>
+      </div>
+      <div class="move">
+        <div class="check">□</div>
+        <div class="what">大基金三期投向公告 <small>设备链占比</small></div>
+        <div>投向 HBM / 设备 / 材料的比例变化</div>
+        <div class="when">持续</div>
+        <div class="src">财政部 / 国开金融</div>
+      </div>
+      <div class="move">
+        <div class="check">□</div>
+        <div class="what">华海清科募资可行性报告 <small>688120 公告</small></div>
+        <div>看募投项目是否明确指向 HBM CMP</div>
+        <div class="when">已发布</div>
+        <div class="src">巨潮 PDF</div>
+      </div>
+      <div class="move">
+        <div class="check">□</div>
+        <div class="what">海外云厂资本开支 <small>微软 / 谷歌 / 亚马逊 / Meta</small></div>
+        <div>2026 资本开支指引 + 增长率变化</div>
+        <div class="when">2026 Q3 财报</div>
+        <div class="src">SEC 10-Q</div>
+      </div>
+      <div class="move">
+        <div class="check">□</div>
+        <div class="what">长鑫 HBM3 良率追踪 <small>官方 + 行业大会</small></div>
+        <div>从 50% 提升到 70%+ 的进度</div>
+        <div class="when">持续</div>
+        <div class="src">长鑫官网 / SEMI 大会</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 DATA PROVENANCE -->
+<section id="data-provenance">
+  <div class="wrap">
+    <div class="sec-num">08 — 数据来源与勘误</div>
+    <h2 class="sec-h">关键数字的<em>证据强度</em>逐条说明</h2>
+    <p class="sec-sub">以下把正文中的关键断言拆成“公开信息 / 行业估算 / 推测待验证”三类，方便读者判断可信度并自行复核。</p>
+
+    <table class="prio reveal">
+      <thead>
+        <tr><th>数据点</th><th>当前表述</th><th>证据强度</th><th>说明与建议复核来源</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">大基金三期规模</td><td>注册资本 3,440 亿元</td><td><span class="ev-pill ev-strong">公开</span></td><td>国家企业信用信息公示系统，2024-05-24 注册</td></tr>
+        <tr><td class="nm">HBM 产线设备投资</td><td>单条 12 寸产线 ~$8B，普通 DRAM 2-3 倍</td><td><span class="ev-pill ev-med">估算</span></td><td>综合券商设备投资模型；实际随工艺节点、产能规模差异大</td></tr>
+        <tr><td class="nm">长鑫 HBM3 量产时间</td><td>2026 H1 量产 HBM3</td><td><span class="ev-pill ev-weak">待验证</span></td><td>公开信息仅确认长鑫推进 HBM 研发，具体量产节点需公司或客户公告确认</td></tr>
+        <tr><td class="nm">长鑫 HBM3 良率</td><td>约 50%</td><td><span class="ev-pill ev-weak">待验证</span></td><td>产业链传闻区间，未见官方披露；建议追踪长鑫/客户/设备验收公告</td></tr>
+        <tr><td class="nm">SK 海力士 HBM 涨价</td><td>2024-2025 涨价约 +30%</td><td><span class="ev-pill ev-med">估算</span></td><td>2024 年 HBM 价格确实大幅上涨，具体幅度随合约季度变化；建议查 SK 海力士季度财报与行业均价</td></tr>
+        <tr><td class="nm">长鑫资本开支增幅</td><td>2025 H2 上调 +80% YoY</td><td><span class="ev-pill ev-weak">待验证</span></td><td>未见官方资本开支指引，数字来自媒体/券商推算；建议查长鑫融资公告与设备招标额</td></tr>
+        <tr><td class="nm">七层国产化率</td><td>5% / 2% / 28% / 38% / 13% / 18% / 9%</td><td><span class="ev-pill ev-med">估算</span></td><td>无统一官方统计，不同机构/口径差异大；建议用海关/招标/公司出货综合交叉验证</td></tr>
+        <tr><td class="nm">海外设备单价</td><td>$2M / $3M / $5M / $8M / $10M / $15M / $20M</td><td><span class="ev-pill ev-med">估算</span></td><td>基于公开招标文件与产业调研区间，具体型号/配置价格差异显著</td></tr>
+        <tr><td class="nm">华海清科 2026 定增</td><td>已获上交所受理并进入审核问询回复阶段，募投 CMP/减薄扩产</td><td><span class="ev-pill ev-strong">公开</span></td><td>688120 公告：2026-06-24 审核问询函回复，2026-06-23 预案二次修订稿及募集说明书修订稿</td></tr>
+        <tr><td class="nm">拓荆科技 2025 定增</td><td>已完成，ALD 用于键合界面</td><td><span class="ev-pill ev-strong">公开</span></td><td>688072 公告：2026-06-23 发行情况报告书、验资报告、募集资金专户存储三方监管协议</td></tr>
+        <tr><td class="nm">长川科技 2026 H1 业绩预告</td><td>已发布：归母净利 9.0–10.0 亿元，同比 +110.76%–134.18%；扣非 +139.38%–167.38%</td><td><span class="ev-pill ev-strong">公开</span></td><td>300604 公告：2026-06-23 半年度业绩预告；数字测试机等多产品线销售大幅增长</td></tr>
+        <tr><td class="nm">长川国内测试机份额 ~30%</td><td>国内份额 ~30%，仅次于爱德万</td><td><span class="ev-pill ev-med">估算</span></td><td>第三方机构统计口径不一；建议以公司年报/行业协会数据为准</td></tr>
+        <tr><td class="nm">北方华创 2025 员工持股计划</td><td>已完成股票购买</td><td><span class="ev-pill ev-strong">公开</span></td><td>002371 公告：2026-05-30 关于 2025 年员工持股计划完成股票购买的公告</td></tr>
+        <tr><td class="nm">北方华创 HBM 刻蚀出货</td><td>TSV 深孔刻蚀是 2-3 年突破点，出货未公开披露</td><td><span class="ev-pill ev-weak">待验证</span></td><td>公司未单独披露 HBM 用刻蚀机订单；建议追踪客户验证/招标公告</td></tr>
+        <tr><td class="nm">芯源微 投资者关系记录</td><td>2025 年报、2026 Q1 已披露；最新 IR 记录 2026-06-08</td><td><span class="ev-pill ev-strong">公开</span></td><td>688037 公告：2026-06-08 投资者关系活动记录表（编号 2026-02）</td></tr>
+        <tr><td class="nm">精测电子 HBM AOI</td><td>2026-06-11 跟踪评级报告；2026-06-23 限制性股票激励授予；HBM AOI 收入未单独披露</td><td><span class="ev-pill ev-weak">待验证</span></td><td>建议查 2026 半年报及投资者关系记录，确认 HBM 相关收入</td></tr>
+        <tr><td class="nm">华海清科 2025 / 2026Q1 财务</td><td>2025 营收 46.48 亿元（+36.46%），归母净利 10.84 亿元（+5.89%），毛利率 41.81%，研发费用 5.37 亿元（+40.63%）；2026 Q1 营收 12.01 亿元（+31.66%），毛利率 42.31%</td><td><span class="ev-pill ev-strong">公开</span></td><td>688120 2025 年报 / 2026 Q1 报告；akshare stock_yjbb_em + stock_profit_sheet_by_report_em</td></tr>
+        <tr><td class="nm">拓荆科技 2025 / 2026Q1 财务</td><td>2025 营收 65.19 亿元（+58.87%），归母净利 9.27 亿元（+34.67%），毛利率 34.95%，研发费用 7.70 亿元（+1.80%）；2026 Q1 营收 11.12 亿元（+56.97%），归母净利 5.71 亿元（+488.29%），毛利率 41.69%</td><td><span class="ev-pill ev-strong">公开</span></td><td>688072 2025 年报 / 2026 Q1 报告；akshare stock_yjbb_em + stock_profit_sheet_by_report_em</td></tr>
+        <tr><td class="nm">长川科技 2025 / 2026Q1 财务</td><td>2025 营收 52.92 亿元（+45.31%），归母净利 13.31 亿元（+190.42%），毛利率 55.05%，研发费用 9.36 亿元（-3.19%）；2026 Q1 营收 13.78 亿元（+69.09%），归母净利 3.53 亿元（+217.60%），毛利率 56.81%</td><td><span class="ev-pill ev-strong">公开</span></td><td>300604 2025 年报 / 2026 Q1 报告；akshare stock_yjbb_em + stock_profit_sheet_by_report_em</td></tr>
+        <tr><td class="nm">北方华创 2025 / 2026Q1 财务</td><td>2025 营收 393.53 亿元（+30.85%），归母净利 55.22 亿元（-1.77%），毛利率 40.10%，研发费用 54.35 亿元（+46.96%）；2026 Q1 营收 103.23 亿元（+25.80%），归母净利 16.35 亿元（+3.42%），毛利率 40.77%</td><td><span class="ev-pill ev-strong">公开</span></td><td>002371 2025 年报 / 2026 Q1 报告；akshare stock_yjbb_em + stock_profit_sheet_by_report_em</td></tr>
+        <tr><td class="nm">芯源微 2025 / 2026Q1 财务</td><td>2025 营收 19.48 亿元（+11.11%），归母净利 0.72 亿元（-64.64%），毛利率 35.39%，研发费用 2.55 亿元（-14.21%）；2026 Q1 营收 3.31 亿元（+20.08%），归母净利 0.04 亿元（-24.70%），毛利率 46.69%</td><td><span class="ev-pill ev-strong">公开</span></td><td>688037 2025 年报 / 2026 Q1 报告；akshare stock_yjbb_em + stock_profit_sheet_by_report_em</td></tr>
+        <tr><td class="nm">精测电子 2025 / 2026Q1 财务</td><td>2025 营收 33.48 亿元（+30.51%），归母净利 0.82 亿元（+184.04%），毛利率 46.73%，研发费用 8.12 亿元（+12.13%）；2026 Q1 营收 7.39 亿元（+7.26%），归母净利 0.43 亿元（+13.61%），毛利率 45.44%</td><td><span class="ev-pill ev-strong">公开</span></td><td>300567 2025 年报 / 2026 Q1 报告；akshare stock_yjbb_em + stock_profit_sheet_by_report_em</td></tr>
+        <tr><td class="nm">华海清科 IR 记录 HBM 表述</td><td>2026-04-24 IR 记录：“公司部分先进制程 CMP 装备进入头部存储厂商 HBM 产线作为基线设备”；2025-11-05 明确“针对性开发满足 HBM 等先进封装新需求的机型”</td><td><span class="ev-pill ev-strong">公开</span></td><td>688120 投资者关系活动记录表；PDF 原文提取自东方财富 pdf.dfcfw.com</td></tr>
+        <tr><td class="nm">拓荆科技 IR 记录键合设备</td><td>2025-07-15 IR 记录：“芯片对晶圆混合键合产品已获得客户订单并出货”；“晶圆对晶圆键合产品已实现量产并获得复购订单”</td><td><span class="ev-pill ev-strong">公开</span></td><td>688072 投资者关系活动记录表；PDF 原文提取自东方财富 pdf.dfcfw.com</td></tr>
+        <tr><td class="nm">芯源微 IR 记录 HBM 受益</td><td>2026-06-08 IR 记录（编号 2026-02）：“随着客户在 CoWoS、HBM 以及 3DIC 等领域的深化布局，公司后道产品也将持续受益”；临时键合/解键合设备 2025 年收入占比大幅提升</td><td><span class="ev-pill ev-strong">公开</span></td><td>688037 投资者关系活动记录表；PDF 原文提取自东方财富 pdf.dfcfw.com</td></tr>
+        <tr><td class="nm">长川科技 IR 记录 HBM 表述</td><td>2025-05-28 IR 记录（业绩说明会）未直接提及 HBM；主要强调高端测试机、分选机自主技术及市场拓展</td><td><span class="ev-pill ev-med">估算/待验证</span></td><td>300604 投资者关系活动记录表；PDF 原文提取自东方财富 pdf.dfcfw.com；需后续 IR/半年报确认 HBM 测试进展</td></tr>
+        <tr><td class="nm">北方华创 / 精测电子 IR 记录</td><td>2025-01-01 至 2026-06-25 期间未检索到投资者关系活动记录表；HBM 相关卡位需依赖客户验证/招标/半年报披露</td><td><span class="ev-pill ev-weak">待验证</span></td><td>akshare stock_individual_notice_report 检索结果为空；建议跟踪后续公告</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <h4>研究方法</h4>
+      <p style="color:var(--ink-2);font-size:13px;line-height:1.65;max-width:540px">Serenity 供应链瓶颈定位法：先排稀缺层，再排公司，最后看证据。每条结论标注证据强度（强 / 中 / 弱）和主要风险。投资决策由用户自行承担。</p>
+      <div class="disc">
+        数据时间锚 2026/06/25。大基金三期规模等可公开核验的数据已标注来源；国产化率、设备单价、良率、资本开支增幅等为行业估算/推测，未完全经公司公告交叉验证。<br>
+        页面中“公开信息”为官方公告/注册信息；“行业估算”为券商或产业调研综合；“待验证”为逻辑推演或单一信源，需读者自行复核。<br>
+        <span style="color:var(--copper)">不构成投资建议。</span> 投资有风险，决策需谨慎。
+      </div>
+    </div>
+    <div>
+      <h4>主要来源</h4>
+      <ul>
+        <li>· <a href="https://data.eastmoney.com/notices/stock/688120.html">华海清科 公告</a></li>
+        <li>· <a href="https://data.eastmoney.com/notices/stock/688072.html">拓荆科技 公告</a></li>
+        <li>· <a href="https://data.eastmoney.com/notices/stock/300604.html">长川科技 公告</a></li>
+        <li>· <a href="https://data.eastmoney.com/notices/stock/688037.html">芯源微 公告</a></li>
+        <li>· <a href="https://data.eastmoney.com/notices/stock/002371.html">北方华创 公告</a></li>
+        <li>· <a href="https://data.eastmoney.com/notices/stock/300567.html">精测电子 公告</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Scroll reveal — only enable animation if JS + viewport is real
+  document.body.classList.add('anim-ready');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:.08,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  // Fallback: if reveals never trigger (e.g. print, headless fullPage), show all after 1.2s
+  setTimeout(()=>{document.querySelectorAll('.reveal:not(.in)').forEach(el=>el.classList.add('in'));},1200);
+
+  // Checkbox toggles (local only)
+  document.querySelectorAll('.move').forEach(m=>{
+    m.style.cursor='pointer';
+    m.addEventListener('click',()=>{
+      const c=m.querySelector('.check');
+      if(c.textContent.trim()==='□'){c.textContent='✓';c.style.color='var(--signal)';c.style.borderColor='var(--signal)';m.style.opacity='.55';}
+      else{c.textContent='□';c.style.color='var(--ink-muted)';c.style.borderColor='var(--line-2)';m.style.opacity='1';}
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+{
+  "fetched_at": "2026-06-25T08:23:35Z",
+  "source": "10jqka",
+  "industry_sectors": [
+    {
+      "name": "机场航运",
+      "index_value": "1870.8",
+      "change_pct": 4.05,
+      "inflow": 37.2,
+      "outflow": 24.35,
+      "net_flow": 12.85,
+      "company_count": "13",
+      "leader_name": "华夏航空",
+      "leader_pct": "10.03%"
+    },
+    {
+      "name": "元件",
+      "index_value": "31237.9",
+      "change_pct": 3.14,
+      "inflow": 812.05,
+      "outflow": 699.8,
+      "net_flow": 112.24,
+      "company_count": "62",
+      "leader_name": "三环集团",
+      "leader_pct": "12.64%"
+    },
+    {
+      "name": "证券",
+      "index_value": "1513.38",
+      "change_pct": 3.06,
+      "inflow": 371.72,
+      "outflow": 313.95,
+      "net_flow": 57.78,
+      "company_count": "50",
+      "leader_name": "长江证券",
+      "leader_pct": "9.97%"
+    },
+    {
+      "name": "半导体",
+      "index_value": "21095.6",
+      "change_pct": 2.21,
+      "inflow": 2587.41,
+      "outflow": 2506.73,
+      "net_flow": 80.68,
+      "company_count": "180",
+      "leader_name": "北京君正",
+      "leader_pct": "20.00%"
+    },
+    {
+      "name": "保险",
+      "index_value": "1933.55",
+      "change_pct": 2.19,
+      "inflow": 54.5,
+      "outflow": 51.78,
+      "net_flow": 2.72,
+      "company_count": "5",
+      "leader_name": "中国人保",
+      "leader_pct": "4.18%"
+    },
+    {
+      "name": "白酒",
+      "index_value": "1904",
+      "change_pct": 1.64,
+      "inflow": 68.7,
+      "outflow": 62.6,
+      "net_flow": 6.09,
+      "company_count": "19",
+      "leader_name": "酒鬼酒",
+      "leader_pct": "7.20%"
+    },
+    {
+      "name": "游戏",
+      "index_value": "9038",
+      "change_pct": 1.51,
+      "inflow": 65.69,
+      "outflow": 58.89,
+      "net_flow": 6.8,
+      "company_count": "24",
+      "leader_name": "巨人网络",
+      "leader_pct": "10.00%"
+    },
+    {
+      "name": "电子化学品",
+      "index_value": "123295",
+      "change_pct": 1.27,
+      "inflow": 346.07,
+      "outflow": 359.95,
+      "net_flow": -13.88,
+      "company_count": "42",
+      "leader_name": "兴福电子",
+      "leader_pct": "14.01%"
+    },
+    {
+      "name": "其他电子",
+      "index_value": "25883.5",
+      "change_pct": 0.93,
+      "inflow": 187.64,
+      "outflow": 189.34,
+      "net_flow": -1.71,
+      "company_count": "34",
+      "leader_name": "太龙股份",
+      "leader_pct": "20.03%"
+    },
+    {
+      "name": "黑色家电",
+      "index_value": "4191.92",
+      "change_pct": 0.29,
+      "inflow": 10.27,
+      "outflow": 9.78,
+      "net_flow": 0.49,
+      "company_count": "9",
+      "leader_name": "海信视像",
+      "leader_pct": "3.90%"
+    },
+    {
+      "name": "多元金融",
+      "index_value": "1070.02",
+      "change_pct": -0.01,
+      "inflow": 18.44,
+      "outflow": 19.57,
+      "net_flow": -1.13,
+      "company_count": "26",
+      "leader_name": "渤海租赁",
+      "leader_pct": "4.26%"
+    },
+    {
+      "name": "小金属",
+      "index_value": "10727.5",
+      "change_pct": -0.16,
+      "inflow": 300.7,
+      "outflow": 321.47,
+      "net_flow": -20.76,
+      "company_count": "29",
+      "leader_name": "东方钽业",
+      "leader_pct": "10.00%"
+    }
+  ],
+  "concept_sectors": [
+    {
+      "name": "存储芯片",
+      "change_pct": 3.12,
+      "net_flow": 13.8,
+      "leader_name": "利尔达"
+    },
+    {
+      "name": "同花顺果指数",
+      "change_pct": 3.09,
+      "net_flow": 8.71,
+      "leader_name": "信维通信"
+    },
+    {
+      "name": "中芯国际概念",
+      "change_pct": 2.8,
+      "net_flow": -42.13,
+      "leader_name": "美埃科技"
+    },
+    {
+      "name": "培育钻石",
+      "change_pct": 2.65,
+      "net_flow": -6.47,
+      "leader_name": "沃尔德"
+    },
+    {
+      "name": "超级电容",
+      "change_pct": 2.58,
+      "net_flow": 32.16,
+      "leader_name": "万顺新材"
+    },
+    {
+      "name": "国家大基金持股",
+      "change_pct": 2.57,
+      "net_flow": 13.34,
+      "leader_name": "佰维存储"
+    },
+    {
+      "name": "AI手机",
+      "change_pct": 2.07,
+      "net_flow": 95.53,
+      "leader_name": "帝奥微"
+    },
+    {
+      "name": "PET铜箔",
+      "change_pct": 1.98,
+      "net_flow": 7.61,
+      "leader_name": "汇成真空"
+    },
+    {
+      "name": "先进封装",
+      "change_pct": 1.8,
+      "net_flow": 42.41,
+      "leader_name": "利尔达"
+    },
+    {
+      "name": "共封装光学(CPO)",
+      "change_pct": 1.75,
+      "net_flow": 137.31,
+      "leader_name": "帝奥微"
+    },
+    {
+      "name": "汽车芯片",
+      "change_pct": 1.64,
+      "net_flow": 29.72,
+      "leader_name": "利尔达"
+    },
+    {
+      "name": "光纤概念",
+      "change_pct": 1.5,
+      "net_flow": 93.99,
+      "leader_name": "杰普特"
+    }
+  ],
+  "pullback_candidates": [],
+  "strong_buy_candidates": [
+    {
+      "code": "300394",
+      "name": "天孚通信",
+      "price": 341.97,
+      "change_pct": 5.13,
+      "turnover_rate": "7.32%",
+      "net_flow_str": "21.57亿",
+      "net_flow": 2157000000.0
+    },
+    {
+      "code": "688041",
+      "name": "海光信息",
+      "price": 360.28,
+      "change_pct": 6.88,
+      "turnover_rate": "2.60%",
+      "net_flow_str": "11.97亿",
+      "net_flow": 1197000000.0
+    },
+    {
+      "code": "000725",
+      "name": "京东方A",
+      "price": 7.52,
+      "change_pct": 6.36,
+      "turnover_rate": "10.45%",
+      "net_flow_str": "11.52亿",
+      "net_flow": 1152000000.0
+    },
+    {
+      "code": "688008",
+      "name": "澜起科技",
+      "price": 279.16,
+      "change_pct": 4.75,
+      "turnover_rate": "7.96%",
+      "net_flow_str": "9.55亿",
+      "net_flow": 955000000.0000001
+    },
+    {
+      "code": "000977",
+      "name": "浪潮信息",
+      "price": 68.57,
+      "change_pct": 5.82,
+      "turnover_rate": "6.67%",
+      "net_flow_str": "9.37亿",
+      "net_flow": 936999999.9999999
+    },
+    {
+      "code": "600183",
+      "name": "生益科技",
+      "price": 187.2,
+      "change_pct": 5.58,
+      "turnover_rate": "2.99%",
+      "net_flow_str": "9.24亿",
+      "net_flow": 924000000.0
+    },
+    {
+      "code": "300433",
+      "name": "蓝思科技",
+      "price": 55.72,
+      "change_pct": 5.29,
+      "turnover_rate": "4.31%",
+      "net_flow_str": "6.93亿",
+      "net_flow": 693000000.0
+    },
+    {
+      "code": "002049",
+      "name": "紫光国微",
+      "price": 87.5,
+      "change_pct": 4.62,
+      "turnover_rate": "7.80%",
+      "net_flow_str": "6.92亿",
+      "net_flow": 692000000.0
+    },
+    {
+      "code": "300475",
+      "name": "香农芯创",
+      "price": 306.25,
+      "change_pct": 5.75,
+      "turnover_rate": "12.47%",
+      "net_flow_str": "5.73亿",
+      "net_flow": 573000000.0
+    },
+    {
+      "code": "603228",
+      "name": "景旺电子",
+      "price": 77.63,
+      "change_pct": 6.49,
+      "turnover_rate": "4.93%",
+      "net_flow_str": "5.72亿",
+      "net_flow": 572000000.0
+    },
+    {
+      "code": "300458",
+      "name": "全志科技",
+      "price": 39.97,
+      "change_pct": 6.47,
+      "turnover_rate": "13.06%",
+      "net_flow_str": "5.57亿",
+      "net_flow": 557000000.0
+    },
+    {
+      "code": "688048",
+      "name": "长光华芯",
+      "price": 441.8,
+      "change_pct": 5.19,
+      "turnover_rate": "8.47%",
+      "net_flow_str": "5.50亿",
+      "net_flow": 550000000.0
+    }
+  ]
+}

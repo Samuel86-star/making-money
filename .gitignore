@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual env
+.venv/
+venv/
+
+# Heavy / regenerable data
+data/ohlcv/
+data/trending/
+data/a_share_list.json
+
+# Temp
+tmp/
+*.log
+.DS_Store
+
+# Tool state
+.claude/
+.playwright-mcp/

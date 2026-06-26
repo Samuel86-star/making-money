@@ -1,0 +1,145 @@
+{
+  "config": {
+    "vol_mult": 1.5,
+    "vol_avg_days": 5,
+    "shrink_ratio": 0.7
+  },
+  "results": [
+    {
+      "strategy": [
+        "expand",
+        "weak_up",
+        "放量 + 涨幅<2%"
+      ],
+      "summary": {
+        "label": "放量 + 涨幅<2%",
+        "n": 29200,
+        "win_rate": 44.9,
+        "mean": 0.026,
+        "median": -0.177,
+        "stdev": 2.868,
+        "min": -17.038,
+        "max": 20.019
+      }
+    },
+    {
+      "strategy": [
+        "shrink",
+        "weak_up",
+        "缩量 + 涨幅<2%"
+      ],
+      "summary": {
+        "label": "缩量 + 涨幅<2%",
+        "n": 89570,
+        "win_rate": 47.7,
+        "mean": 0.076,
+        "median": 0.0,
+        "stdev": 2.565,
+        "min": -28.1,
+        "max": 54.855
+      }
+    },
+    {
+      "strategy": [
+        "any",
+        "weak_up",
+        "仅涨幅<2% (基准)"
+      ],
+      "summary": {
+        "label": "仅涨幅<2% (基准)",
+        "n": 401632,
+        "win_rate": 46.9,
+        "mean": 0.061,
+        "median": 0.0,
+        "stdev": 2.599,
+        "min": -92.933,
+        "max": 54.855
+      }
+    },
+    {
+      "strategy": [
+        "expand",
+        "breakout",
+        "放量 + 突破(涨幅≥5%)"
+      ],
+      "summary": {
+        "label": "放量 + 突破(涨幅≥5%)",
+        "n": 35702,
+        "win_rate": 45.7,
+        "mean": 0.295,
+        "median": -0.392,
+        "stdev": 4.997,
+        "min": -20.023,
+        "max": 20.207
+      }
+    },
+    {
+      "strategy": [
+        "shrink",
+        "breakout",
+        "缩量 + 突破(涨幅≥5%)"
+      ],
+      "summary": {
+        "label": "缩量 + 突破(涨幅≥5%)",
+        "n": 2432,
+        "win_rate": 70.0,
+        "mean": 3.311,
+        "median": 3.862,
+        "stdev": 6.019,
+        "min": -20.0,
+        "max": 20.031
+      }
+    },
+    {
+      "strategy": [
+        "any",
+        "breakout",
+        "纯突破(涨幅≥5%) (基准)"
+      ],
+      "summary": {
+        "label": "纯突破(涨幅≥5%) (基准)",
+        "n": 62331,
+        "win_rate": 48.3,
+        "mean": 0.524,
+        "median": -0.126,
+        "stdev": 5.187,
+        "min": -20.023,
+        "max": 20.207
+      }
+    },
+    {
+      "strategy": [
+        "expand",
+        "limit_up",
+        "放量 + 涨停(涨幅≥9.5%)"
+      ],
+      "summary": {
+        "label": "放量 + 涨停(涨幅≥9.5%)",
+        "n": 12935,
+        "win_rate": 50.5,
+        "mean": 0.935,
+        "median": 0.094,
+        "stdev": 6.039,
+        "min": -20.023,
+        "max": 20.207
+      }
+    },
+    {
+      "strategy": [
+        "any",
+        "limit_up",
+        "纯涨停(涨幅≥9.5%) (基准)"
+      ],
+      "summary": {
+        "label": "纯涨停(涨幅≥9.5%) (基准)",
+        "n": 22037,
+        "win_rate": 54.0,
+        "mean": 1.354,
+        "median": 0.604,
+        "stdev": 6.169,
+        "min": -20.023,
+        "max": 20.207
+      }
+    }
+  ]
+}

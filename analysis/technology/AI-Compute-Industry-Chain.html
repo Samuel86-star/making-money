@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 算力产业链 · 2026 全景蓝图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1622; --surface:#16202F; --surface-2:#1C2839; --surface-3:#243245;
+    --ink:#E5EAF2; --ink-2:#B5C0D2; --ink-muted:#6B7A92; --line:#26324A; --line-2:#34405A;
+    --amber:#F5A524; --amber-dim:#9C6A18;
+    --teal:#5EEAD4; --teal-dim:#2F9D8A;
+    --crimson:#F87171; --info:#7AB8FF;
+    --c0:#A78BFA; --c1:#60A5FA; --c2:#22D3EE; --c3:#34D399; --c4:#FBBF24; --c5:#F87171; --c6:#A78BFA;
+    --ev-strong:#5EEAD4; --ev-med:#FBBF24; --ev-weak:#6B7A92;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:"Manrope",-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6;font-size:15px;-webkit-font-smoothing:antialiased;letter-spacing:.005em;background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:48px 48px;background-position:-1px -1px}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 36px}
+  a{color:var(--info);text-decoration:none;border-bottom:1px dotted rgba(122,184,255,.4)}
+  a:hover{border-bottom-style:solid}
+  .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:-.01em}
+  .topbar{border-bottom:1px solid var(--line);padding:14px 0;font-size:11px;color:var(--ink-muted);position:sticky;top:0;background:rgba(14,22,34,.85);backdrop-filter:blur(10px);z-index:50}
+  .topbar .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .topbar .left{display:flex;gap:18px;align-items:center}
+  .topbar .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);display:inline-block;animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .hero{padding:84px 0 56px;border-bottom:1px solid var(--line);position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(245,165,36,.06) 0%,transparent 55%);pointer-events:none}
+  .hero .wrap{display:grid;grid-template-columns:1.15fr 1fr;gap:72px;align-items:center;position:relative;z-index:1}
+  .eyebrow{font-size:11px;letter-spacing:.24em;color:var(--amber);text-transform:uppercase;margin-bottom:22px;display:flex;gap:14px;align-items:center;font-weight:500}
+  .eyebrow .pipe{color:var(--line-2)}
+  h1{font-family:"Space Grotesk",sans-serif;font-size:62px;line-height:1.04;font-weight:600;letter-spacing:-.025em;margin-bottom:20px}
+  h1 em{font-style:normal;color:var(--amber);font-weight:500}
+  h1 .amp{color:var(--ink-muted);font-weight:300}
+  .lede{font-size:17px;color:var(--ink-2);line-height:1.6;max-width:580px;margin-bottom:32px;font-weight:400}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:2px;background:var(--surface);max-width:640px}
+  .stat{padding:16px 18px;border-right:1px solid var(--line)}
+  .stat:last-child{border-right:none}
+  .stat .n{font-family:"Space Grotesk",sans-serif;font-size:26px;font-weight:600;color:var(--amber);line-height:1;display:block;margin-bottom:6px;letter-spacing:-.02em}
+  .stat .l{font-size:11px;color:var(--ink-muted);letter-spacing:.05em;line-height:1.3;display:block}
+  .blueprint{position:relative;width:100%;aspect-ratio:1;max-width:460px;margin:0 auto}
+  .blueprint svg{width:100%;height:100%;display:block}
+  .bp-frame{position:absolute;inset:0;pointer-events:none;border:1px dashed var(--line-2);border-radius:2px}
+  .bp-frame::before,.bp-frame::after{content:"";position:absolute;width:12px;height:12px;border:1px solid var(--line-2);background:var(--bg)}
+  .bp-frame::before{top:-7px;left:-7px;border-right:none;border-bottom:none}
+  .bp-frame::after{bottom:-7px;right:-7px;border-left:none;border-top:none}
+  section{padding:72px 0;border-bottom:1px solid var(--line);position:relative}
+  section:last-of-type{border-bottom:none}
+  .sec-head{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:48px}
+  .sec-num{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--amber);letter-spacing:.18em;margin-bottom:10px;text-transform:uppercase}
+  .sec-h{font-family:"Space Grotesk",sans-serif;font-size:34px;font-weight:600;line-height:1.18;letter-spacing:-.018em;max-width:780px}
+  .sec-h em{font-style:normal;color:var(--amber);font-weight:500}
+  .sec-sub{font-size:15px;color:var(--ink-2);line-height:1.6;max-width:720px;margin-top:14px}
+  .rings-stage{display:grid;grid-template-columns:1fr 380px;gap:48px;align-items:start}
+  .rings-box{position:relative;width:100%;aspect-ratio:1;max-width:560px;margin:0 auto;border:1px solid var(--line);border-radius:2px;background:radial-gradient(ellipse at 50% 50%,var(--surface) 0%,var(--bg) 70%);padding:24px}
+  .rings-box-inner{position:relative;width:100%;height:100%}
+  .ring{position:absolute;border-radius:50%;display:flex;align-items:flex-start;justify-content:center;text-align:center;overflow:hidden;padding-top:6px;pointer-events:none;cursor:pointer;transition:transform .3s cubic-bezier(.2,.6,.2,1),box-shadow .3s}
+  .ring:hover{transform:scale(1.012)}
+  .ring.active{box-shadow:0 0 0 1.5px var(--amber) inset,0 0 24px rgba(245,165,36,.18)}
+  .ring .lab{font-family:"Space Grotesk",sans-serif;font-size:11.5px;font-weight:600;color:#fff;letter-spacing:.02em;margin-top:6px;text-shadow:0 1px 2px rgba(0,0,0,.4);line-height:1.2}
+  .ring .sub{font-size:9.5px;color:rgba(255,255,255,.85);margin-top:3px;white-space:nowrap;font-weight:500}
+  .ring .stars{display:none}
+  .r0{inset:42%;background:var(--c0)}
+  .r1{inset:33%;background:var(--c1)}
+  .r2{inset:24%;background:var(--c2)}
+  .r3{inset:15%;background:var(--c3)}
+  .r4{inset:6%;background:var(--c4)}
+  .r5{inset:-3%;background:var(--c5);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .r6{inset:-12%;background:var(--c6);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .r0{display:flex;align-items:center;justify-content:center;flex-direction:column}
+  .r0 .lab{font-size:13px;margin-top:0}
+  .info{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:24px;position:sticky;top:80px;box-shadow:0 4px 24px rgba(0,0,0,.2)}
+  .info .tag{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .info h3{font-family:"Space Grotesk",sans-serif;font-size:20px;font-weight:600;margin-bottom:4px;letter-spacing:-.015em}
+  .info .role{font-size:12.5px;color:var(--ink-muted);margin-bottom:14px;font-style:italic;font-weight:400}
+  .info p{font-size:13.5px;color:var(--ink-2);margin-bottom:10px;line-height:1.55}
+  .info .players{font-size:12px;color:var(--ink-muted);margin-bottom:12px;line-height:1.55}
+  .info .players b{color:var(--ink);font-weight:600}
+  .meter{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+  .meter-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px}
+  .meter-row .ml{width:68px;color:var(--ink-muted);flex-shrink:0;font-size:11px;letter-spacing:.04em}
+  .meter-bar{flex:1;height:6px;background:var(--surface-3);border-radius:1px;overflow:hidden;position:relative}
+  .meter-fill{height:100%;border-radius:1px;transition:width .5s}
+  .meter-row .mv{width:54px;text-align:right;font-weight:600;color:var(--ink);flex-shrink:0;font-family:"JetBrains Mono",monospace;font-size:11.5px}
+  .meter-sub{font-size:11.5px;font-weight:500;margin:2px 0 12px 78px;line-height:1.4}
+  .profit-row{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink-2);line-height:1.55}
+  .profit-row b{color:var(--amber);font-weight:600;margin-right:6px}
+  .ring-hint{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-muted);text-align:center;margin-top:14px;letter-spacing:.06em}
+  .layers{background:var(--surface);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .layer{display:grid;grid-template-columns:50px 220px 1fr 280px 90px;gap:24px;align-items:center;padding:18px 24px;border-bottom:1px solid var(--line);transition:background .2s}
+  .layer:last-child{border-bottom:none}
+  .layer:hover{background:var(--surface-2)}
+  .layer .rank{font-family:"Space Grotesk",sans-serif;font-size:30px;color:var(--amber);text-align:center;line-height:1;font-weight:500}
+  .layer .name{font-size:14.5px;font-weight:600;color:var(--ink);font-family:"Space Grotesk",sans-serif;letter-spacing:-.005em}
+  .layer .name small{display:block;font-size:10.5px;color:var(--ink-muted);margin-top:3px;font-weight:400;letter-spacing:.04em;font-family:"JetBrains Mono",monospace}
+  .layer .bar-wrap{display:flex;flex-direction:column;gap:5px}
+  .layer .bar{height:6px;background:var(--surface-3);border-radius:1px;overflow:hidden;position:relative}
+  .layer .bar .overseas{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--crimson),#FBBF24)}
+  .layer .bar .domestic{position:absolute;right:0;top:0;bottom:0;background:var(--teal)}
+  .layer .bar-legend{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-muted);letter-spacing:.04em}
+  .layer .bar-legend .overseas-l{color:var(--crimson)}
+  .layer .bar-legend .domestic-l{color:var(--teal)}
+  .layer .price{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-2);text-align:right}
+  .layer .price b{color:var(--ink);font-weight:600}
+  .rel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .rel-cluster{background:var(--surface);padding:24px 26px;position:relative}
+  .rel-cluster h4{font-family:"Space Grotesk",sans-serif;font-size:14px;font-weight:600;margin-bottom:4px;letter-spacing:-.005em}
+  .rel-cluster h4 .en{display:block;font-size:10px;color:var(--ink-muted);font-weight:400;margin-top:3px;letter-spacing:.12em;text-transform:uppercase;font-family:"JetBrains Mono",monospace}
+  .rel-cluster .desc{font-size:12px;color:var(--ink-muted);line-height:1.55;margin-bottom:18px}
+  .rel-svg{width:100%;height:200px;display:block}
+  .rel-foot{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-2);line-height:1.55}
+  .rel-foot b{color:var(--amber);font-weight:600}
+  .timeline-wrap{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:36px 32px;position:relative}
+  .timeline-svg{width:100%;height:auto;display:block}
+  .timeline-note{margin-top:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .tl-n{background:var(--surface-2);padding:14px 18px}
+  .tl-n .k{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+  .tl-n .v{font-size:12px;color:var(--ink-2);line-height:1.5}
+  .flow{display:flex;flex-wrap:wrap;gap:0;justify-content:center;align-items:stretch;background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:24px 18px}
+  .node{flex:1;min-width:96px;max-width:118px;background:var(--bg);border:1px solid var(--line);padding:12px 8px;text-align:center;position:relative;border-radius:2px}
+  .node .n{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-muted);margin-bottom:4px;letter-spacing:.05em}
+  .node .t{font-family:"Space Grotesk",sans-serif;font-size:12.5px;font-weight:600}
+  .node .ex{font-size:10.5px;color:var(--ink-muted);margin-top:3px}
+  .node.you{background:rgba(245,165,36,.08);border-color:var(--amber)}
+  .arrow{display:flex;align-items:center;justify-content:center;color:var(--line-2);font-size:18px;padding:0 4px;font-family:"JetBrains Mono",monospace}
+  .you-badge{display:inline-block;font-size:9px;background:var(--amber);color:#0E1622;padding:1px 6px;border-radius:2px;margin-top:4px;font-weight:600;letter-spacing:.04em}
+  .lag-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .lag-cat{background:var(--surface);padding:22px 24px;position:relative}
+  .lag-cat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+  .lag-cat.l1::before{background:var(--crimson)}
+  .lag-cat.l2::before{background:#FBBF24}
+  .lag-cat.l3::before{background:var(--info)}
+  .lag-cat.l4::before{background:var(--teal)}
+  .lag-cat .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+  .lag-cat h4{font-family:"Space Grotesk",sans-serif;font-size:15px;font-weight:600}
+  .lag-cat .n{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-muted);letter-spacing:.1em}
+  .lag-row{padding:10px 0;border-top:1px solid var(--line)}
+  .lag-row:first-of-type{border-top:none;padding-top:4px}
+  .lag-row .rname{font-size:13px;color:var(--ink);font-weight:500;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .lag-row .rname .rk{font-size:11px;color:var(--ink-muted);font-family:"JetBrains Mono",monospace;font-weight:400}
+  .lag-row .rtargets{font-size:11.5px;color:var(--ink-muted);margin-top:3px;line-height:1.5}
+  .lag-row .rwhy{font-size:11.5px;color:var(--amber);margin-top:4px;line-height:1.5;font-weight:500}
+  .kcards{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .kcard{background:var(--surface);padding:24px;position:relative;transition:background .2s}
+  .kcard:hover{background:var(--surface-2)}
+  .kcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--teal)}
+  .kcard.b::before{background:var(--crimson)}
+  .kcard.c::before{background:#34D399}
+  .kcard h4{font-family:"Space Grotesk",sans-serif;font-size:17px;font-weight:600;margin-bottom:4px;letter-spacing:-.01em}
+  .kcard .what{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-muted);margin-bottom:12px;letter-spacing:.04em}
+  .kcard p{font-size:13px;color:var(--ink-2);margin-bottom:12px;line-height:1.6}
+  .kcard .meta{font-size:11.5px;color:var(--ink-muted);padding-top:10px;border-top:1px dashed var(--line);line-height:1.55}
+  .kcard .meta b{color:var(--ink);font-weight:600}
+  .etf-tabs{display:flex;gap:0;margin-bottom:1px;background:var(--line);border:1px solid var(--line);border-radius:2px 2px 0 0;overflow:hidden}
+  .etf-tab{flex:1;padding:14px 18px;background:var(--surface);color:var(--ink-muted);font-size:12px;cursor:pointer;border-right:1px solid var(--line);font-weight:500;letter-spacing:.04em;transition:all .2s;text-align:center}
+  .etf-tab:last-child{border-right:none}
+  .etf-tab.active{background:var(--bg);color:var(--amber);font-weight:600}
+  .etf-tab .n{display:block;font-size:18px;font-family:"Space Grotesk",sans-serif;letter-spacing:-.01em;margin-bottom:2px}
+  .etf-panel{display:none;background:var(--surface);border:1px solid var(--line);border-top:none;border-radius:0 0 2px 2px;overflow:hidden}
+  .etf-panel.active{display:block}
+  .etf-tbl{width:100%;border-collapse:collapse;font-size:13px}
+  .etf-tbl th{padding:12px 16px;text-align:left;font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);font-weight:500;text-transform:uppercase;background:var(--surface-2);border-bottom:1px solid var(--line);font-family:"JetBrains Mono",monospace}
+  .etf-tbl td{padding:12px 16px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:middle}
+  .etf-tbl tr:last-child td{border-bottom:none}
+  .etf-tbl tr:hover td{background:var(--surface-2)}
+  .etf-tbl .nm{color:var(--ink);font-weight:600}
+  .etf-tbl .nm small{display:block;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-muted);font-weight:400;margin-top:2px}
+  .ev-pill{font-size:9.5px;letter-spacing:.1em;padding:3px 8px;border-radius:2px;font-weight:600;text-transform:uppercase;white-space:nowrap;display:inline-block;font-family:"JetBrains Mono",monospace}
+  .ev-up{background:rgba(94,234,212,.1);color:var(--ev-strong);border:1px solid rgba(94,234,212,.3)}
+  .ev-dn{background:rgba(248,113,113,.1);color:var(--crimson);border:1px solid rgba(248,113,113,.3)}
+  .ev-mid{background:rgba(251,191,36,.1);color:#FBBF24;border:1px solid rgba(251,191,36,.3)}
+  .ev-flat{background:rgba(107,122,146,.1);color:var(--ink-muted);border:1px solid rgba(107,122,146,.3)}
+  .cov{font-size:10.5px;color:var(--ink-muted);margin-top:3px}
+  .prio{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:2px;overflow:hidden;font-size:13px}
+  .prio thead{background:var(--surface-2)}
+  .prio th{padding:12px 16px;text-align:left;font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);font-weight:500;text-transform:uppercase;border-bottom:1px solid var(--line);font-family:"JetBrains Mono",monospace}
+  .prio td{padding:14px 16px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:middle}
+  .prio tr:last-child td{border-bottom:none}
+  .prio tr:hover td{background:var(--surface-2)}
+  .prio .rk{font-family:"Space Grotesk",sans-serif;font-size:22px;color:var(--amber);text-align:center;width:50px;font-weight:500}
+  .prio .nm{color:var(--ink);font-weight:600}
+  .prio .nm small{display:block;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-muted);font-weight:400;margin-top:2px}
+  .prio .grp{font-size:10.5px;letter-spacing:.05em;color:var(--amber);font-weight:600;background:rgba(245,165,36,.06);border:1px solid rgba(245,165,36,.2);padding:2px 7px;border-radius:2px;display:inline-block;margin-bottom:4px}
+  .stars{color:var(--amber);letter-spacing:1px;font-size:13px;font-family:"JetBrains Mono",monospace}
+  .stars .d{color:var(--line-2)}
+  .bear{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:32px 36px;position:relative}
+  .bear::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--crimson)}
+  .bear h3{font-family:"Space Grotesk",sans-serif;font-size:18px;font-weight:600;margin-bottom:8px;color:var(--crimson)}
+  .bear .lead{font-size:14px;color:var(--ink-2);line-height:1.6;margin-bottom:20px;max-width:780px}
+  .bear-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden;margin-top:8px}
+  .bear-card{background:var(--surface-2);padding:18px 20px}
+  .bear-card .scen{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;line-height:1.35}
+  .bear-card .imp{font-size:12px;color:var(--ink-muted);line-height:1.55}
+  .insight{margin-top:48px;background:linear-gradient(120deg,rgba(245,165,36,.04),rgba(94,234,212,.04));border:1px solid var(--line-2);border-radius:2px;padding:32px 36px}
+  .insight h3{font-family:"Space Grotesk",sans-serif;font-size:18px;font-weight:600;margin-bottom:14px;display:flex;gap:10px;align-items:center}
+  .insight p{font-size:14.5px;color:var(--ink-2);margin-bottom:10px;line-height:1.7}
+  .insight .key{color:var(--amber);font-weight:600}
+  footer{padding:60px 0 40px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-muted);line-height:1.7}
+  footer .wrap{display:grid;grid-template-columns:2fr 1fr 1fr;gap:48px}
+  footer h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;color:var(--ink);text-transform:uppercase;margin-bottom:14px;font-weight:600}
+  footer ul{list-style:none;padding:0}
+  footer li{padding:3px 0;font-size:12px}
+  footer .disc{margin-top:24px;padding-top:20px;border-top:1px solid var(--line);font-size:11.5px;line-height:1.7}
+  body.anim-ready .reveal{opacity:0;transform:translateY(12px);transition:opacity .7s,transform .7s cubic-bezier(.2,.6,.2,1)}
+  body.anim-ready .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.reveal{opacity:1;transform:none}}
+  @media(max-width:1080px){
+    .rings-stage{grid-template-columns:1fr}
+    .info{position:static}
+    .rel-grid{grid-template-columns:1fr}
+    .lag-grid{grid-template-columns:1fr}
+    .kcards{grid-template-columns:1fr}
+    .bear-grid{grid-template-columns:1fr}
+    .timeline-note{grid-template-columns:1fr}
+    footer .wrap{grid-template-columns:1fr;gap:24px}
+    .layer{grid-template-columns:50px 1fr;gap:14px;padding:14px 18px}
+    .layer .bar-wrap{grid-column:1/-1}
+    .layer .price{grid-column:1/-1;text-align:left;border-top:1px dashed var(--line);padding-top:8px}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .stat:nth-child(2){border-right:none}
+    .stat:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  }
+  @media(max-width:680px){
+    .wrap{padding:0 20px}
+    .hero{padding:48px 0 36px}
+    .hero .wrap{grid-template-columns:1fr;gap:36px}
+    h1{font-size:38px}
+    .sec-h{font-size:24px}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="left">
+      <span><span class="dot"></span> AI COMPUTE SUPPLY CHAIN</span>
+      <span class="mono">DEEP DOSSIER · 2026·06·25</span>
+    </div>
+    <div>SERENITY METHODOLOGY · v2 蓝图重制</div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow"><span>研究主题</span><span class="pipe">|</span><span>A 股 AI 算力</span><span class="pipe">|</span><span>2026/06/25</span></div>
+      <h1>AI 算力产业链 —<br><em>7 圈</em>、<em>3 联盟</em>、<em>1 条时间线</em></h1>
+      <p class="lede">16 个月前 HBM 涨价触发, 7 圈同时扩产, 设备材料订单密集兑现。谁卡谁、谁先兑现、谁还滞涨 — 一页拆开。</p>
+      <div class="stats">
+        <div class="stat"><span class="n">7</span><span class="l">同心圈结构</span></div>
+        <div class="stat"><span class="n">7+1</span><span class="l">稀缺层卡点</span></div>
+        <div class="stat"><span class="n">14+</span><span class="l">龙头标的</span></div>
+        <div class="stat"><span class="n">3</span><span class="l">产业联盟</span></div>
+      </div>
+    </div>
+    <div class="blueprint">
+      <div class="bp-frame"></div>
+      <svg viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#26324A" stroke-width=".4" opacity=".5"/>
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="460" height="460" fill="url(#grid)"/>
+        <g stroke="#6B7A92" stroke-width=".6" fill="#6B7A92" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing=".05em">
+          <line x1="50" y1="230" x2="410" y2="230" stroke-dasharray="2,3"/>
+          <circle cx="50" cy="230" r="2.5" fill="#F5A524"/>
+          <circle cx="410" cy="230" r="2.5" fill="#F5A524"/>
+          <text x="230" y="222" text-anchor="middle" fill="#F5A524">9% 环带 / 18-24 月扩产</text>
+          <line x1="20" y1="20" x2="40" y2="20"/><line x1="20" y1="20" x2="20" y2="40"/>
+          <line x1="440" y1="20" x2="420" y2="20"/><line x1="440" y1="20" x2="440" y2="40"/>
+          <line x1="20" y1="440" x2="40" y2="440"/><line x1="20" y1="440" x2="20" y2="420"/>
+          <line x1="440" y1="440" x2="420" y2="440"/><line x1="440" y1="440" x2="440" y2="420"/>
+          <text x="20" y="14" font-size="8">A1</text><text x="446" y="14" font-size="8">A2</text>
+          <text x="20" y="454" font-size="8">B1</text><text x="446" y="454" font-size="8">B2</text>
+        </g>
+        <g transform="translate(230,230)">
+          <circle r="195" fill="none" stroke="#A78BFA" stroke-width="1" opacity=".55"/>
+          <circle r="165" fill="none" stroke="#F87171" stroke-width="1" opacity=".6"/>
+          <circle r="135" fill="none" stroke="#22D3EE" stroke-width="1" opacity=".6"/>
+          <circle r="105" fill="none" stroke="#34D399" stroke-width="1" opacity=".6"/>
+          <circle r="75" fill="none" stroke="#FBBF24" stroke-width="1" opacity=".6"/>
+          <circle r="45" fill="none" stroke="#60A5FA" stroke-width="1" opacity=".6"/>
+          <circle r="15" fill="#A78BFA" opacity=".8"/>
+          <g font-family="Space Grotesk, sans-serif" font-size="9" letter-spacing=".06em" fill="#B5C0D2">
+            <line x1="195" y1="0" x2="225" y2="0" stroke="#6B7A92" stroke-width=".5"/><text x="232" y="3" fill="#A78BFA">⑦ 设备材料</text>
+            <line x1="165" y1="-5" x2="195" y2="-5" stroke="#6B7A92" stroke-width=".5"/><text x="202" y="-2" fill="#F87171">⑥ 联网 / CPO</text>
+            <line x1="135" y1="10" x2="165" y2="10" stroke="#6B7A92" stroke-width=".5"/><text x="172" y="13" fill="#22D3EE">⑤ 整机 / 电源</text>
+            <line x1="105" y1="-15" x2="135" y2="-15" stroke="#6B7A92" stroke-width=".5"/><text x="142" y="-12" fill="#34D399">④ 装板 / PCB</text>
+            <line x1="75" y1="20" x2="105" y2="20" stroke="#6B7A92" stroke-width=".5"/><text x="112" y="23" fill="#FBBF24">③ 封装 / CoWoS</text>
+            <line x1="45" y1="-25" x2="75" y2="-25" stroke="#6B7A92" stroke-width=".5"/><text x="82" y="-22" fill="#60A5FA">② 记忆 / HBM</text>
+            <text x="0" y="3" text-anchor="middle" fill="#fff" font-weight="600" font-size="10">①</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">01 — 七圈结构</div>
+      <h2 class="sec-h">同心圆 = <em>扩产传导路径</em></h2>
+      <p class="sec-sub">从大脑 GPU 到最外圈设备材料, 6+1 圈共同吃 AI 算力扩产红利。点击任一圈查看卡点、国产水平、收益链。环带宽 9%, 扩产周期 18-24 月。</p>
+    </div>
+    <div class="rings-stage">
+      <div class="rings-box">
+        <div class="rings-box-inner">
+          <div class="ring r6" data-k="r6"><div><div class="lab">⑦ 设备材料</div><div class="sub">光刻/刻蚀/硅片</div><div class="stars">国产 ★★★</div></div></div>
+          <div class="ring r5" data-k="r5"><div><div class="lab">⑥ 联网</div><div class="sub">光模块/CPO</div><div class="stars">国产 ★★★★★</div></div></div>
+          <div class="ring r4" data-k="r4"><div><div class="lab">⑤ 整机</div><div class="sub">电源/液冷</div><div class="stars">国产 ★★★★</div></div></div>
+          <div class="ring r3" data-k="r3"><div><div class="lab">④ 装板</div><div class="sub">PCB/MLCC</div><div class="stars">国产 ★★★★</div></div></div>
+          <div class="ring r2" data-k="r2"><div><div class="lab">③ 封装</div><div class="sub">CoWoS/载板</div><div class="stars">国产 ★</div></div></div>
+          <div class="ring r1" data-k="r1"><div><div class="lab">② 记忆</div><div class="sub">HBM</div><div class="stars">国产 ★★</div></div></div>
+          <div class="ring r0" data-k="r0"><div class="lab" style="font-size:12px;line-height:1.2">①大脑<br>GPU</div><div class="stars" style="font-size:7px;letter-spacing:-2.5px">★★</div></div>
+        </div>
+      </div>
+      <div class="info" id="info">
+        <div class="tag" id="tag" style="color:var(--c0)">第一圈 · 核心</div>
+        <h3 id="title">GPU / 加速器</h3>
+        <div class="role" id="role">工厂里的"核心大脑工人"</div>
+        <p id="desc">负责算。英伟达 H100/B200 是主角，国产昇腾/寒武纪可用但受制裁、落后 1-2 代。</p>
+        <div class="players" id="players"><b>关键公司：</b>英伟达 · AMD · 华为昇腾 · 寒武纪</div>
+        <div class="meter" id="meter">
+          <div class="meter-row"><div class="ml">国产水平</div><div class="meter-bar"><div class="meter-fill" style="width:40%;background:#FB923C"></div></div><div class="mv" style="font-size:14px;color:#FB923C;letter-spacing:-1px">★★</div></div>
+          <div style="font-size:12px;color:#FB923C;font-weight:600;margin:2px 0 10px 80px">有但受制裁</div>
+          <div class="meter-row"><div class="ml">收益链</div><div style="flex:1;font-size:12px;color:var(--ink-2);line-height:1.5">英伟达拿走大头（毛利率70%+），国产体量小赚不多</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="ring-hint">👆 点击/hover 任意一圈 · 左边色条 = 国产强弱（红弱→青强）</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">02 — 稀缺层</div>
+      <h2 class="sec-h">7 个 <em>卡点层</em>, 国产化率 2%-38%</h2>
+      <p class="sec-sub">按扩产难度排序。卡点层 = 客户认证严 + 交付周期长 + 供应商少。HBM 制造比 DRAM 难 3-5 倍, 单条 12 寸产线设备投资 ~$8B。</p>
+    </div>
+    <div class="layers reveal">
+      <div class="layer"><div class="rank">01</div><div class="name">TSV 刻蚀<small>DEEP REACTIVE ION ETCH</small></div><div class="bar-wrap"><div class="bar"><div class="overseas" style="width:95%"></div><div class="domestic" style="width:5%"></div></div><div class="bar-legend"><span class="overseas-l">海外 95%</span><span class="domestic-l">国产 5%</span></div></div><div class="price"><b>~$15M</b> / 台</div><div></div></div>
+      <div class="layer"><div class="rank">02</div><div class="name">混合键合机<small>HYBRID BONDING</small></div><div class="bar-wrap"><div class="bar"><div class="overseas" style="width:98%"></div><div class="domestic" style="width:2%"></div></div><div class="bar-legend"><span class="overseas-l">海外 98%</span><span class="domestic-l">国产 2%</span></div></div><div class="price"><b>~$20M</b> / 台</div><div></div></div>
+      <div class="layer"><div class="rank">03</div><div class="name">CMP / 减薄<small>CHEMICAL MECHANICAL POLISH</small></div><div class="bar-wrap"><div class="bar"><div class="overseas" style="width:72%"></div><div class="domestic" style="width:28%"></div></div><div class="bar-legend"><span class="overseas-l">海外 72%</span><span class="domestic-l">国产 28%</span></div></div><div class="price"><b>~$5M</b> / 台</div><div></div></div>
+      <div class="layer"><div class="rank">04</div><div class="name">薄膜沉积<small>PECVD / ALD</small></div><div class="bar-wrap"><div class="bar"><div class="overseas" style="width:62%"></div><div class="domestic" style="width:38%"></div></div><div class="bar-legend"><span class="overseas-l">海外 62%</span><span class="domestic-l">国产 38%</span></div></div><div class="price"><b>~$8M</b> / 台</div><div></div></div>
+      <div class="layer"><div class="rank">05</div><div class="name">探针测试机<small>PROBE TEST</small></div><div class="bar-wrap"><div class="bar"><div class="overseas" style="width:87%"></div><div class="domestic" style="width:13%"></div></div><div class="bar-legend"><span class="overseas-l">海外 87%</span><span class="domestic-l">国产 13%</span></div></div><div class="price"><b>~$3M</b> / 台</div><div></div></div>
+      <div class="layer"><div class="rank">06</div><div class="name">涂胶显影<small>COAT / DEVELOP</small></div><div class="bar-wrap"><div class="bar"><div class="overseas" style="width:82%"></div><div class="domestic" style="width:18%"></div></div><div class="bar-legend"><span class="overseas-l">海外 82%</span><span class="domestic-l">国产 18%</span></div></div><div class="price"><b>~$2M</b> / 台</div><div></div></div>
+      <div class="layer"><div class="rank">07</div><div class="name">晶圆检测<small>AOI / DEFECT INSPECTION</small></div><div class="bar-wrap"><div class="bar"><div class="overseas" style="width:91%"></div><div class="domestic" style="width:9%"></div></div><div class="bar-legend"><span class="overseas-l">海外 91%</span><span class="domestic-l">国产 9%</span></div></div><div class="price"><b>~$10M</b> / 台</div><div></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">03 — 关系网络</div>
+      <h2 class="sec-h">3 个产业 <em>联盟</em>, 龙头之间的关系图</h2>
+      <p class="sec-sub">理解谁控制稀缺层, 谁供应稀缺层, 谁只是顺势吃红利 — 比看 K 线更重要。</p>
+    </div>
+    <div class="rel-grid reveal">
+      <div class="rel-cluster">
+        <h4>NVIDIA 三角联盟<span class="en">Cluster 01 · AI Compute Core</span></h4>
+        <div class="desc">全球 AI 算力扩张主轴。NVIDIA 不生产任何东西, 但控制 IP 和客户; TSMC 控制 CoWoS 产能; SK海力士 控制 HBM 供给。</div>
+        <svg class="rel-svg" viewBox="0 0 320 200">
+          <defs><marker id="arr1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#F5A524"/></marker></defs>
+          <line x1="160" y1="40" x2="60" y2="150" stroke="#F5A524" stroke-width="1.2" marker-end="url(#arr1)" opacity=".7"/>
+          <line x1="160" y1="40" x2="260" y2="150" stroke="#F5A524" stroke-width="1.2" marker-end="url(#arr1)" opacity=".7"/>
+          <line x1="60" y1="150" x2="260" y2="150" stroke="#6B7A92" stroke-width=".8" stroke-dasharray="3,3" opacity=".5"/>
+          <g font-family="Space Grotesk, sans-serif" font-size="11" fill="#E5EAF2">
+            <rect x="120" y="15" width="80" height="36" rx="2" fill="#60A5FA" opacity=".15" stroke="#60A5FA" stroke-width="1.2"/>
+            <text x="160" y="32" text-anchor="middle" font-weight="600">NVIDIA</text>
+            <text x="160" y="45" text-anchor="middle" fill="#6B7A92" font-size="9" font-family="JetBrains Mono, monospace">GPU 设计 / IP</text>
+            <rect x="20" y="140" width="80" height="36" rx="2" fill="#A78BFA" opacity=".15" stroke="#A78BFA" stroke-width="1.2"/>
+            <text x="60" y="157" text-anchor="middle" font-weight="600">TSMC</text>
+            <text x="60" y="170" text-anchor="middle" fill="#6B7A92" font-size="9" font-family="JetBrains Mono, monospace">CoWoS 独占</text>
+            <rect x="220" y="140" width="80" height="36" rx="2" fill="#34D399" opacity=".15" stroke="#34D399" stroke-width="1.2"/>
+            <text x="260" y="157" text-anchor="middle" font-weight="600">SK 海力士</text>
+            <text x="260" y="170" text-anchor="middle" fill="#6B7A92" font-size="9" font-family="JetBrains Mono, monospace">HBM 90%+</text>
+          </g>
+        </svg>
+        <div class="rel-foot"><b>关键传导：</b>HBM 涨价 → CoWoS 扩产 → NVIDIA 出货。任一环节卡住, 整个链条停摆。</div>
+      </div>
+      <div class="rel-cluster">
+        <h4>国产 GPU 替代链<span class="en">Cluster 02 · Domestic Substitute</span></h4>
+        <div class="desc">寒武纪在 TSMC 代工 (制裁风险), 华为昇腾 + 海光 在 中芯/自研产线。AMD 通过 x86 IP 授权 给海光, 不是股权关系。</div>
+        <svg class="rel-svg" viewBox="0 0 320 200">
+          <line x1="80" y1="50" x2="80" y2="155" stroke="#F5A524" stroke-width="1.2" opacity=".7"/>
+          <line x1="160" y1="50" x2="80" y2="155" stroke="#F5A524" stroke-width="1" opacity=".5" stroke-dasharray="2,2"/>
+          <line x1="240" y1="50" x2="80" y2="155" stroke="#F5A524" stroke-width="1" opacity=".5" stroke-dasharray="2,2"/>
+          <line x1="160" y1="155" x2="240" y2="50" stroke="#6B7A92" stroke-width=".8" stroke-dasharray="3,3" opacity=".5"/>
+          <g font-family="Space Grotesk, sans-serif" font-size="11" fill="#E5EAF2">
+            <rect x="50" y="25" width="60" height="32" rx="2" fill="#60A5FA" opacity=".15" stroke="#60A5FA"/><text x="80" y="40" text-anchor="middle" font-weight="600">寒武纪</text><text x="80" y="51" text-anchor="middle" fill="#6B7A92" font-size="9" font-family="JetBrains Mono, monospace">TSMC</text>
+            <rect x="130" y="25" width="60" height="32" rx="2" fill="#60A5FA" opacity=".15" stroke="#60A5FA"/><text x="160" y="40" text-anchor="middle" font-weight="600">华为昇腾</text><text x="160" y="51" text-anchor="middle" fill="#6B7A92" font-size="9" font-family="JetBrains Mono, monospace">中芯/自研</text>
+            <rect x="210" y="25" width="60" height="32" rx="2" fill="#60A5FA" opacity=".15" stroke="#60A5FA"/><text x="240" y="40" text-anchor="middle" font-weight="600">海光</text><text x="240" y="51" text-anchor="middle" fill="#6B7A92" font-size="9" font-family="JetBrains Mono, monospace">AMD IP</text>
+            <rect x="50" y="155" width="220" height="32" rx="2" fill="#FBBF24" opacity=".15" stroke="#FBBF24" stroke-width="1.2"/><text x="160" y="171" text-anchor="middle" font-weight="600">中芯国际 · 国产代工基础</text><text x="160" y="182" text-anchor="middle" fill="#6B7A92" font-size="9" font-family="JetBrains Mono, monospace">国产 GPU 落地依赖</text>
+          </g>
+        </svg>
+        <div class="rel-foot"><b>关键风险：</b>寒武纪若被 TSMC 制裁, 国产 GPU 链分裂成 中芯派 + 卡死派。</div>
+      </div>
+      <div class="rel-cluster">
+        <h4>大基金持股链<span class="en">Cluster 03 · National Fund</span></h4>
+        <div class="desc">大基金一期 / 二期 / 三期 累计 5,000 亿+, 是设备 / 材料 / 代工 / 封测龙头 的共同股东。买设备链就是买大基金组合。</div>
+        <svg class="rel-svg" viewBox="0 0 320 200">
+          <line x1="160" y1="30" x2="60" y2="155" stroke="#F5A524" stroke-width="1.2" opacity=".7"/>
+          <line x1="160" y1="30" x2="120" y2="155" stroke="#F5A524" stroke-width="1.2" opacity=".7"/>
+          <line x1="160" y1="30" x2="180" y2="155" stroke="#F5A524" stroke-width="1.2" opacity=".7"/>
+          <line x1="160" y1="30" x2="240" y2="155" stroke="#F5A524" stroke-width="1.2" opacity=".7"/>
+          <g font-family="Space Grotesk, sans-serif" font-size="10" fill="#E5EAF2">
+            <rect x="115" y="10" width="90" height="30" rx="2" fill="#F5A524" opacity=".2" stroke="#F5A524" stroke-width="1.2"/><text x="160" y="24" text-anchor="middle" font-weight="600">大基金</text><text x="160" y="35" text-anchor="middle" fill="#6B7A92" font-size="8" font-family="JetBrains Mono, monospace">一期 / 二期 / 三期</text>
+            <rect x="30" y="150" width="60" height="38" rx="2" fill="#5EEAD4" opacity=".12" stroke="#5EEAD4"/><text x="60" y="167" text-anchor="middle" font-weight="600">北方华创</text><text x="60" y="180" text-anchor="middle" fill="#6B7A92" font-size="8" font-family="JetBrains Mono, monospace">002371</text>
+            <rect x="95" y="150" width="50" height="38" rx="2" fill="#5EEAD4" opacity=".12" stroke="#5EEAD4"/><text x="120" y="167" text-anchor="middle" font-weight="600">中微</text><text x="120" y="180" text-anchor="middle" fill="#6B7A92" font-size="8" font-family="JetBrains Mono, monospace">688012</text>
+            <rect x="155" y="150" width="50" height="38" rx="2" fill="#5EEAD4" opacity=".12" stroke="#5EEAD4"/><text x="180" y="167" text-anchor="middle" font-weight="600">拓荆</text><text x="180" y="180" text-anchor="middle" fill="#6B7A92" font-size="8" font-family="JetBrains Mono, monospace">688072</text>
+            <rect x="215" y="150" width="50" height="38" rx="2" fill="#5EEAD4" opacity=".12" stroke="#5EEAD4"/><text x="240" y="167" text-anchor="middle" font-weight="600">中芯</text><text x="240" y="180" text-anchor="middle" fill="#6B7A92" font-size="8" font-family="JetBrains Mono, monospace">688981</text>
+          </g>
+        </svg>
+        <div class="rel-foot"><b>关键判断：</b>大基金三期投向 = 设备链未来 3 年订单 + 估值 的政策风向标。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">04 — 时间线</div>
+      <h2 class="sec-h">2024-2028 <em>三年</em> 节奏: 涨价 → 量产 → 订单 → 业绩</h2>
+      <p class="sec-sub">每一环延迟 6-9 月, 2025H2 → 2026 → 2027 叠加。设备厂 2026Q2-Q3 是业绩兑现窗口。</p>
+    </div>
+    <div class="timeline-wrap reveal">
+      <svg class="timeline-svg" viewBox="0 0 1100 240" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="tl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6B7A92"/><stop offset=".4" stop-color="#F5A524"/><stop offset="1" stop-color="#5EEAD4"/></linearGradient></defs>
+        <line x1="80" y1="120" x2="1020" y2="120" stroke="url(#tl)" stroke-width="2"/>
+        <g font-family="JetBrains Mono, monospace" font-size="11" fill="#6B7A92" letter-spacing=".1em">
+          <line x1="80" y1="115" x2="80" y2="125" stroke="#6B7A92"/><text x="80" y="148" text-anchor="middle">2024</text>
+          <line x1="330" y1="115" x2="330" y2="125" stroke="#6B7A92"/><text x="330" y="148" text-anchor="middle">2025</text>
+          <line x1="580" y1="115" x2="580" y2="125" stroke="#6B7A92"/><text x="580" y="148" text-anchor="middle">2026</text>
+          <line x1="830" y1="115" x2="830" y2="125" stroke="#6B7A92"/><text x="830" y="148" text-anchor="middle">2027</text>
+          <line x1="1020" y1="115" x2="1020" y2="125" stroke="#6B7A92"/><text x="1020" y="148" text-anchor="middle">2028</text>
+        </g>
+        <g>
+          <g transform="translate(150,120)"><circle r="9" fill="#F87171" stroke="#0E1622" stroke-width="2"/><text y="-26" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="600" fill="#E5EAF2">HBM 涨价</text><text y="-12" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6B7A92">2024-2025</text><text y="32" text-anchor="middle" font-size="11" fill="#B5C0D2">SK 海力士 HBM</text><text y="46" text-anchor="middle" font-size="11" fill="#B5C0D2">涨价 +30%</text></g>
+          <g transform="translate(380,120)"><circle r="9" fill="#F5A524" stroke="#0E1622" stroke-width="2"/><text y="-26" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="600" fill="#E5EAF2">长鑫 HBM3 量产</text><text y="-12" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6B7A92">2025 H1</text><text y="32" text-anchor="middle" font-size="11" fill="#B5C0D2">良率 ~50%</text><text y="46" text-anchor="middle" font-size="11" fill="#B5C0D2">差距 5→3 年</text></g>
+          <g transform="translate(630,120)"><circle r="9" fill="#5EEAD4" stroke="#0E1622" stroke-width="2"/><text y="-26" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="600" fill="#E5EAF2">设备订单 + 业绩</text><text y="-12" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6B7A92">2025H2-2026</text><text y="32" text-anchor="middle" font-size="11" fill="#B5C0D2">华海/拓荆/长川</text><text y="46" text-anchor="middle" font-size="11" fill="#B5C0D2">订单 → 收入</text></g>
+          <g transform="translate(860,120)"><circle r="9" fill="#5EEAD4" stroke="#0E1622" stroke-width="2"/><text y="-26" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="600" fill="#E5EAF2">良率冲刺 + CoWoS 翻倍</text><text y="-12" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6B7A92">2026 H2-2027</text><text y="32" text-anchor="middle" font-size="11" fill="#B5C0D2">HBM3 70%+</text><text y="46" text-anchor="middle" font-size="11" fill="#B5C0D2">CoWoS 2027 翻倍</text></g>
+          <g transform="translate(1010,120)"><circle r="9" fill="#A78BFA" stroke="#0E1622" stroke-width="2"/><text y="-26" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="600" fill="#E5EAF2">HBM4 启动</text><text y="-12" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#6B7A92">2027-2028</text><text y="32" text-anchor="middle" font-size="11" fill="#B5C0D2">第二波</text><text y="46" text-anchor="middle" font-size="11" fill="#B5C0D2">设备订单</text></g>
+        </g>
+        <g transform="translate(630,120)"><line x1="0" y1="20" x2="0" y2="80" stroke="#F5A524" stroke-width="1" stroke-dasharray="2,2"/><text x="0" y="95" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#F5A524" letter-spacing=".1em">▲ 2026·06·25 当前位置</text></g>
+      </svg>
+      <div class="timeline-note">
+        <div class="tl-n"><div class="k">Phase 1 · 触发</div><div class="v">HBM 紧缺 → 长鑫决策</div></div>
+        <div class="tl-n"><div class="k">Phase 2 · 兑现</div><div class="v">设备订单 → 业绩</div></div>
+        <div class="tl-n"><div class="k">Phase 3 · 突破</div><div class="v">HBM4 → 第二波</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">05 — 完整供应链</div>
+      <h2 class="sec-h">从 <em>沙子</em> 到 <em>AI 应用</em> 的 10 步流程</h2>
+      <p class="sec-sub">流程是顺序的, 黄色节点是你问过的环节（装板 ④ + 联网 ⑥）。设备材料横跨所有圈。</p>
+    </div>
+    <div class="flow reveal">
+      <div class="node"><div class="n">起点</div><div class="t">沙子/硅</div><div class="ex">原材料</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">⑦</div><div class="t">设备/材料</div><div class="ex">光刻/刻蚀/硅片</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">①②</div><div class="t">芯片</div><div class="ex">GPU/HBM</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">③</div><div class="t">封装</div><div class="ex">CoWoS+载板</div></div>
+      <div class="arrow">→</div>
+      <div class="node you"><div class="n">④</div><div class="t">装板</div><div class="ex">PCB+MLCC</div><div class="you-badge">你问的</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">⑤</div><div class="t">整机</div><div class="ex">供电+散热</div></div>
+      <div class="arrow">→</div>
+      <div class="node you"><div class="n">⑥</div><div class="t">联网</div><div class="ex">光模块/CPO</div><div class="you-badge">你问的</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">⑦</div><div class="t">数据中心</div><div class="ex">万国/世纪</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">⑧</div><div class="t">云厂商</div><div class="ex">微软/谷歌</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">终点</div><div class="t">AI 应用</div><div class="ex">ChatGPT 等</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">06 — 滞涨四分类</div>
+      <h2 class="sec-h">把 10 个滞涨环节按 <em>滞涨原因</em> 拆开</h2>
+      <p class="sec-sub">同样没涨, 原因完全不同。分清"缺标的"vs"缺催化"vs"估值压制"vs"刚启动", 才能选对介入时机。</p>
+    </div>
+    <div class="lag-grid reveal">
+      <div class="lag-cat l1"><div class="head"><h4>① 缺标的</h4><span class="n">02 标的</span></div>
+        <div class="lag-row"><div class="rname">HBM 国产 <span class="rk">记忆</span></div><div class="rtargets">长鑫存储（未上市）</div><div class="rwhy">→ 等 IPO；提前布局上游设备</div></div>
+        <div class="lag-row"><div class="rname">CoWoS 国产 <span class="rk">封装</span></div><div class="rtargets">长电 / 通富 / 兴森</div><div class="rwhy">→ 2027-2028 突破, 现在是期货</div></div>
+      </div>
+      <div class="lag-cat l2"><div class="head"><h4>② 缺催化</h4><span class="n">04 标的</span></div>
+        <div class="lag-row"><div class="rname">电源中端 <span class="rk">整机</span></div><div class="rtargets">杰华特 · 欧陆通 · 麦格米特</div><div class="rwhy">→ 等 800V HVDC 渗透</div></div>
+        <div class="lag-row"><div class="rname">IDC <span class="rk">末端</span></div><div class="rtargets">万国数据 · 世纪互联 · 奥飞</div><div class="rwhy">→ 等资本开支重启</div></div>
+        <div class="lag-row"><div class="rname">整机 ODM <span class="rk">末端</span></div><div class="rtargets">工业富联 · 紫光股份</div><div class="rwhy">→ 利润率 5-8%, 吃不到溢价</div></div>
+        <div class="lag-row"><div class="rname">AI 应用 <span class="rk">末端</span></div><div class="rtargets">金山 · 科大讯飞 · 散</div><div class="rwhy">→ 商业化未兑现, 纯预期</div></div>
+      </div>
+      <div class="lag-cat l3"><div class="head"><h4>③ 估值压制</h4><span class="n">02 标的</span></div>
+        <div class="lag-row"><div class="rname">MLCC 高端 <span class="rk">装板</span></div><div class="rtargets">三环集团 · 风华高科</div><div class="rwhy">→ 村田压制, 等待传导</div></div>
+        <div class="lag-row"><div class="rname">PCB 上游材料 <span class="rk">装板</span></div><div class="rtargets">铜冠铜箔 · 中材科技</div><div class="rwhy">→ 主板涨完, 上游才到</div></div>
+      </div>
+      <div class="lag-cat l4"><div class="head"><h4>④ 刚启动</h4><span class="n">02 标的</span></div>
+        <div class="lag-row"><div class="rname">CPO 配套链 <span class="rk">联网</span></div><div class="rtargets">源杰科技 · 光库科技</div><div class="rwhy">→ 中际涨完, 配套刚开始</div></div>
+        <div class="lag-row"><div class="rname">氟化液 / 冷板 <span class="rk">整机</span></div><div class="rtargets">巨化股份 · 三花智控</div><div class="rwhy">→ 3M 退出后接盘, 兑现慢</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">07 — 三个关键词</div>
+      <h2 class="sec-h">PCB · CPO · MLCC <em>一次讲清</em></h2>
+      <p class="sec-sub">这三个概念在外圈反复出现, 是 AI 服务器物理层最重要的三个元器件。</p>
+    </div>
+    <div class="kcards reveal">
+      <div class="kcard"><h4>PCB 印制电路板</h4><div class="what">主板 · 工厂的"地砖和走廊"</div><p>芯片封装好后插到 PCB 上, 铜线连起各部件。AI 服务器信号速率高, PCB 层数多、密度高。国产强项。</p><div class="meta"><b>关键公司：</b>深南电路 · 沪电股份 · 生益科技</div></div>
+      <div class="kcard b"><h4>CPO 共封装光学</h4><div class="what">机器间通信 · 光纤快递员的下一代</div><p>光模块是独立小盒子; CPO 把光引擎直接和交换芯片封在一起, 更省电密度更高, 2026 刚量产。中国全球龙头。</p><div class="meta"><b>关键公司：</b>中际旭创 · 新易盛 · 天孚通信 · 博通</div></div>
+      <div class="kcard c"><h4>MLCC 多层陶瓷电容</h4><div class="what">供电稳压 · 板上的"小水池"</div><p>芯片用电忽多忽少, MLCC 稳压滤波。AI 服务器一颗用上千颗, 需求暴涨。高端仍部分依赖村田。</p><div class="meta"><b>关键公司：</b>村田 · 太阳诱电 · 三环集团</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">08 — ETF + 主动基金</div>
+      <h2 class="sec-h">算力链 <em>覆盖度</em> × <em>涨幅</em> × <em>资金流</em></h2>
+      <p class="sec-sub">指数 ETF 拿 β, 主动基金 拿 α。3 张表按需切换。代码以基金公司公告为准。</p>
+    </div>
+    <div class="etf-tabs">
+      <div class="etf-tab active" data-pane="etf-index"><span class="n">11</span>指数 ETF</div>
+      <div class="etf-tab" data-pane="etf-dup"><span class="n">3</span>设备材料同质</div>
+      <div class="etf-tab" data-pane="etf-active"><span class="n">3</span>主动基金</div>
+    </div>
+    <div class="etf-panel active" id="etf-index">
+      <table class="etf-tbl">
+        <thead><tr><th>ETF 名称</th><th style="width:80px">代码</th><th>覆盖圈</th><th style="width:90px">YTD 涨幅</th><th style="width:80px">资金流</th><th>覆盖度</th></tr></thead>
+        <tbody>
+          <tr><td class="nm">广发半导体材料设备主题<small>中证半导体材料设备</small></td><td class="mono">159319</td><td>设备材料 为主, 含 封装 设备</td><td><span class="ev-pill ev-up">猛涨</span></td><td><span class="ev-pill ev-up">大流入</span></td><td>★★★★★<div class="cov">北方华创/中微/拓荆 权重高</div></td></tr>
+          <tr><td class="nm">华夏科创半导体材料设备<small>科创板权重</small></td><td class="mono">562030</td><td>设备材料 科创板权重</td><td><span class="ev-pill ev-up">猛涨</span></td><td><span class="ev-pill ev-up">大流入</span></td><td>★★★★★<div class="cov">华海清科/富创精密</div></td></tr>
+          <tr><td class="nm">博时通信设备<small>中证通信设备</small></td><td class="mono">515880</td><td>联网 光模块 / CPO</td><td><span class="ev-pill ev-up">猛涨</span></td><td><span class="ev-pill ev-up">大流入</span></td><td>★★★★★<div class="cov">中际旭创/新易盛 权重最高</div></td></tr>
+          <tr><td class="nm">华夏国证半导体芯片<small>国证半导体芯片</small></td><td class="mono">159995</td><td>大脑 / 记忆 / 封装</td><td><span class="ev-pill ev-up">大涨</span></td><td><span class="ev-pill ev-up">大流入</span></td><td>★★★★<div class="cov">寒武纪/海光/长电/通富</div></td></tr>
+          <tr><td class="nm">国泰 CES 半导体芯片<small>CES 半导体</small></td><td class="mono">159801</td><td>大脑 / 记忆 / 封装</td><td><span class="ev-pill ev-up">大涨</span></td><td><span class="ev-pill ev-up">流入</span></td><td>★★★★<div class="cov">设计/制造/封测龙头</div></td></tr>
+          <tr><td class="nm">易方达 AI<small>中证人工智能</small></td><td class="mono">159819</td><td>大脑 / 联网 / 应用</td><td><span class="ev-pill ev-up">跟涨</span></td><td><span class="ev-pill ev-up">流入</span></td><td>★★★<div class="cov">算力+应用混合</div></td></tr>
+          <tr><td class="nm">华夏 AI 主题<small>中证人工智能</small></td><td class="mono">515980</td><td>大脑 / 联网 / 应用</td><td><span class="ev-pill ev-mid">跟涨</span></td><td><span class="ev-pill ev-mid">平</span></td><td>★★★<div class="cov">云/算法/算力</div></td></tr>
+          <tr><td class="nm">华夏 5G 通信<small>中证 5G 通信</small></td><td class="mono">515050</td><td>联网 通信 / 部分 CPO</td><td><span class="ev-pill ev-up">跟涨</span></td><td><span class="ev-pill ev-mid">平</span></td><td>★★★<div class="cov">5G 为主</div></td></tr>
+          <tr><td class="nm">科创 50<small>科创板 50</small></td><td class="mono">588000</td><td>大脑 / 封装 / 设备材料 科创</td><td><span class="ev-pill ev-up">跟涨</span></td><td><span class="ev-pill ev-up">流入</span></td><td>★★★★<div class="cov">中芯/海光/中微</div></td></tr>
+          <tr><td class="nm">华夏数字经济<small>中证数字经济</small></td><td class="mono">159658</td><td>末端 IDC / 云计算</td><td><span class="ev-pill ev-mid">弱跟</span></td><td><span class="ev-pill ev-dn">流出</span></td><td>★★<div class="cov">IDC/云/数据要素</div></td></tr>
+          <tr><td class="nm">华夏软件<small>中证软件</small></td><td class="mono">159852</td><td>末端 AI 应用</td><td><span class="ev-pill ev-dn">滞涨</span></td><td><span class="ev-pill ev-dn">流出</span></td><td>★★<div class="cov">应用层, 商业化未兑现</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="etf-panel" id="etf-dup">
+      <table class="etf-tbl">
+        <thead><tr><th>ETF 名称</th><th style="width:80px">代码</th><th>跟踪指数</th><th>管理人</th><th>备注</th></tr></thead>
+        <tbody>
+          <tr><td class="nm">半导体材料设备<small>中证半导体材料设备</small></td><td class="mono">159319</td><td>中证半导体材料设备主题</td><td>广发</td><td>规模最大, 流动性最好</td></tr>
+          <tr><td class="nm">半导体材料设备<small>同指数</small></td><td class="mono">159326</td><td>同</td><td>国泰</td><td>同质化, 看费率</td></tr>
+          <tr><td class="nm">半导体材料设备<small>同指数</small></td><td class="mono">159583</td><td>同</td><td>鹏华</td><td>新发, 待验证</td></tr>
+          <tr><td class="nm">科创半导体材料设备<small>科创板权重</small></td><td class="mono">562030</td><td>上证科创板半导体材料设备</td><td>华夏</td><td>科创溢价, 弹性大</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="etf-panel" id="etf-active">
+      <table class="etf-tbl">
+        <thead><tr><th>基金</th><th style="width:80px">代码</th><th>主题</th><th>经理</th><th style="width:80px">今日</th><th>特征</th></tr></thead>
+        <tbody>
+          <tr><td class="nm">东方 AI 主题混合C<small>017811 / 005844 A</small></td><td class="mono">017811</td><td>AI / 半导体</td><td>严凯 (东方)</td><td><span class="ev-pill ev-up">+6.29%</span></td><td>主题最纯, 弹性最大, 经理集中持仓</td></tr>
+          <tr><td class="nm">大成科技创新混合C<small>008989 / 同公司 A</small></td><td class="mono">008989</td><td>科技创新 (跨)</td><td>大成</td><td><span class="ev-pill ev-mid">+3.33%</span></td><td>分散: 半导体/AI/新能源/生物, 防御</td></tr>
+          <tr><td class="nm">广发远见智选混合C<small>016874 / 同公司 A</small></td><td class="mono">016874</td><td>经理自选</td><td>广发</td><td><span class="ev-pill ev-flat">+2.33%</span></td><td>持仓不透明, 主题不明, 不推荐</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">09 — 估值消化</div>
+      <h2 class="sec-h">龙头公司 <em>PE 矩阵</em> + <em>回归年限</em></h2>
+      <p class="sec-sub">2026/06/25 视角, 编辑性观察。CPO + PCB 龙头 1-1.5 年消化, 设备材料 2-3 年。国产 GPU / HBM 看 2027-2028。</p>
+    </div>
+    <table class="prio reveal">
+      <thead><tr><th>RK</th><th>公司</th><th>分组</th><th>圈</th><th>2026E PE</th><th>2027E PE</th><th>弹性</th><th>主要风险</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="9" class="rk" style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:13px;letter-spacing:.1em">已涨多但合理</td><td class="nm">中际旭创<small>300308</small></td><td><span class="grp">CPO</span></td><td>联网</td><td>22-25x</td><td>15-18x</td><td><span class="stars">★★★★★</span></td><td>1.6T miss / 3.2T 良率</td></tr>
+        <tr><td class="nm">新易盛<small>300502</small></td><td><span class="grp">CPO</span></td><td>联网</td><td>20-23x</td><td>~15x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>客户集中度</td></tr>
+        <tr><td class="nm">北方华创<small>002371</small></td><td><span class="grp">设备</span></td><td>设备材料</td><td>35-40x</td><td>25-28x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>2 年回归</td></tr>
+        <tr><td class="nm">中微公司<small>688012</small></td><td><span class="grp">设备</span></td><td>设备材料</td><td>40-45x</td><td>28-32x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>刻蚀机台数</td></tr>
+        <tr><td class="nm">拓荆科技<small>688072</small></td><td><span class="grp">设备</span></td><td>设备材料</td><td>~45x</td><td>~30x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>ALD 量产爬坡</td></tr>
+        <tr><td class="nm">沪电股份<small>002463</small></td><td><span class="grp">PCB</span></td><td>装板</td><td>20-22x</td><td>16-18x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>已不算贵</td></tr>
+        <tr><td class="nm">深南电路<small>002916</small></td><td><span class="grp">PCB</span></td><td>装板</td><td>22-25x</td><td>~18x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>同 PCB 龙头</td></tr>
+        <tr><td class="nm">英维克<small>002837</small></td><td><span class="grp">液冷</span></td><td>整机</td><td>28-32x</td><td>22-25x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>1.5 年回归</td></tr>
+        <tr><td class="nm">长电科技<small>600584</small></td><td><span class="grp">封装</span></td><td>封装</td><td>25-28x</td><td>~20x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>CoWoS 待突破</td></tr>
+        <tr><td rowspan="5" class="rk" style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:13px;letter-spacing:.1em">估值真正贵</td><td class="nm">寒武纪<small>688256</small></td><td><span class="grp">GPU</span></td><td>大脑</td><td colspan="2" style="text-align:center;color:var(--crimson)">亏损 / PS 30-50x</td><td><span class="stars">★★★★★</span></td><td>要看 2028, 业绩 miss 杀 30%+</td></tr>
+        <tr><td class="nm">海光信息<small>688041</small></td><td><span class="grp">GPU</span></td><td>大脑</td><td>50-60x</td><td>~35x</td><td><span class="stars">★★★★★</span></td><td>信创+DCU 弹性大但贵</td></tr>
+        <tr><td class="nm">长鑫存储<small>未上市</small></td><td><span class="grp">HBM</span></td><td>记忆</td><td colspan="2" style="text-align:center;color:var(--ink-muted)">未上市</td><td><span class="stars">★★★★★</span></td><td>等 IPO, 看 HBM3 良率</td></tr>
+        <tr><td class="nm">源杰科技<small>688498</small></td><td><span class="grp">光芯片</span></td><td>联网</td><td>60-70x</td><td>~40x</td><td><span class="stars">★★★★<span class="d">★</span></span></td><td>估值给满</td></tr>
+        <tr><td class="nm">三环集团<small>300408</small></td><td><span class="grp">MLCC</span></td><td>装板</td><td>20-22x</td><td>~17x</td><td><span class="stars">★★★<span class="d">★★</span></span></td><td>反而便宜, 滞涨合理</td></tr>
+        <tr><td rowspan="5" class="rk" style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:13px;letter-spacing:.1em">滞涨但便宜</td><td class="nm">工业富联<small>601138</small></td><td><span class="grp">ODM</span></td><td>末端</td><td>12-15x</td><td>~12x</td><td><span class="stars">★★<span class="d">★★★</span></span></td><td>利润率低</td></tr>
+        <tr><td class="nm">万国数据<small>9698.HK</small></td><td><span class="grp">IDC</span></td><td>末端</td><td colspan="2" style="text-align:center;color:var(--ink-muted)">PS 3-4x / 亏损</td><td><span class="stars">★★<span class="d">★★★</span></span></td><td>资本开支压制</td></tr>
+        <tr><td class="nm">巨化股份<small>600160</small></td><td><span class="grp">氟化液</span></td><td>整机</td><td>15-18x</td><td>~14x</td><td><span class="stars">★★★<span class="d">★★</span></span></td><td>便宜但兑现慢</td></tr>
+        <tr><td class="nm">欧陆通<small>300870</small></td><td><span class="grp">电源</span></td><td>整机</td><td>~20x</td><td>~16x</td><td><span class="stars">★★★<span class="d">★★</span></span></td><td>电源最便宜</td></tr>
+        <tr><td class="nm">杰华特<small>688141</small></td><td><span class="grp">电源</span></td><td>整机</td><td>30-35x</td><td>~22x</td><td><span class="stars">★★★<span class="d">★★</span></span></td><td>仍偏贵</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">10 — 反方 + 洞察</div>
+      <h2 class="sec-h">什么情况会让 <em>这个判断错</em></h2>
+      <p class="sec-sub">6 个反方情景 + 1 句核心判断。判断错不是丢脸, 是没准备好才丢脸。</p>
+    </div>
+    <div class="bear reveal">
+      <h3>⚠ 6 个反方情景</h3>
+      <p class="lead">每一项都给"如果发生 → 后果"的因果链, 方便快速评估。多个情景同时发生 = 全面杀估值。</p>
+      <div class="bear-grid">
+        <div class="bear-card"><div class="scen">长鑫 HBM3 良率 &lt;30% 持续</div><div class="imp">设备订单延后 + 估值杀 20-30% + HBM 国产化推后 1-2 年</div></div>
+        <div class="bear-card"><div class="scen">海外云厂资本开支下修 &gt;10%</div><div class="imp">HBM 总需求收缩 → 长鑫订单下调 → 设备链全链回调</div></div>
+        <div class="bear-card"><div class="scen">ASML / AMAT 对华部分解禁</div><div class="imp">海外设备恢复供给 → 国产替代节奏放缓 → 国产设备厂估值杀</div></div>
+        <div class="bear-card"><div class="scen">HBM 路线跳过 HBM3 直奔 HBM4</div><div class="imp">HBM3 专用设备折旧加快 → 设备厂 HBM3 订单回款风险</div></div>
+        <div class="bear-card"><div class="scen">大基金三期转向 EDA / IP</div><div class="imp">设备链资金分流 → 订单兑现节奏放缓 → 估值消化变长</div></div>
+        <div class="bear-card"><div class="scen">NVIDIA 自研 HBM / 自建封装</div><div class="imp">外部 HBM 需求减少 → SK海力士投资逻辑松动 → 全链定价重估</div></div>
+      </div>
+    </div>
+    <div class="insight reveal">
+      <h3>核心洞察</h3>
+      <p><span class="key">瓶颈在哪, 利润就在哪。</span>当前最大瓶颈是 HBM 和先进封装 CoWoS, 所以三巨头（海力士/三星/美光, 毛利率 60-80%）+ 台积电赚走最暴利的部分。</p>
+      <p>国产已经强的环节（PCB、光模块）因为竞争充分, 利润率反而没那么极端（20-40%）, 靠规模赚钱。</p>
+      <p><span class="key">最值得关注的是国产正在突破的瓶颈环节</span>（HBM、先进封装）— 一旦突破, 利润弹性最大, 但兑现时间在 2027-2028, 属"期货"。</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <h4>研究方法 · Serenity</h4>
+      <p style="color:var(--ink-2);font-size:12.5px;line-height:1.65;max-width:560px">供应链瓶颈定位法。先排稀缺层, 再排公司, 最后看证据。每条结论标注证据强度和主要风险。投资决策由用户自行承担。</p>
+      <div class="disc">
+        数据时间锚 2026/06/25。设备厂订单、募资项目、业绩预告来自公司公告原文。估值数据为编辑性观察, 实际以交易所披露为准。<br>
+        <span style="color:var(--amber)">不构成投资建议。</span> 投资有风险, 决策需谨慎。
+      </div>
+    </div>
+    <div>
+      <h4>主要数据源</h4>
+      <ul>
+        <li>· <a href="https://np-anotice-stock.eastmoney.com/api/security/ann?stock_list=688120">华海清科 公告</a></li>
+        <li>· <a href="https://np-anotice-stock.eastmoney.com/api/security/ann?stock_list=688072">拓荆科技 公告</a></li>
+        <li>· <a href="https://np-anotice-stock.eastmoney.com/api/security/ann?stock_list=300604">长川科技 公告</a></li>
+        <li>· <a href="https://np-anotice-stock.eastmoney.com/api/security/ann?stock_list=688037">芯源微 公告</a></li>
+        <li>· <a href="https://np-anotice-stock.eastmoney.com/api/security/ann?stock_list=002371">北方华创 公告</a></li>
+        <li>· <a href="https://fundgz.1234567.com.cn/js/017811.js">017811 净值</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>相关文件</h4>
+      <ul>
+        <li>· <a href="HBM-supply-chain.html">HBM 设备链深度</a></li>
+        <li>· <a href="AI-Compute-Industry-Chain.html.bak">原版 v1 (备份)</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+<script>
+const data={
+  r0:{tag:"第一圈 · 核心",c:"var(--c0)",title:"GPU / 加速器",cat:"大脑",role:"工厂里的\"核心大脑工人\"",
+    desc:"负责算。英伟达 H100/B200 是主角, 国产昇腾/寒武纪可用但受制裁、落后 1-2 代。GPU 受 HBM 供给限制 — 算力扩张实际卡在 HBM。",
+    players:"关键公司: 英伟达 · AMD · 华为昇腾 · 寒武纪 · 海光",
+    dom:2,domLabel:"国产 ★★(有但受制裁)",profit:"英伟达拿走大头(毛利率70%+), 国产体量小赚不多"},
+  r1:{tag:"第二圈 · 短期记忆",c:"var(--c1)",title:"HBM 高带宽内存",cat:"记忆",role:"贴在大脑旁的\"工作台\"",
+    desc:"GPU 算时随时取数据, HBM 紧贴着它。SK海力士/三星/美光 垄断 90%+, NVIDIA 优先供。长鑫 2026 量产 HBM3, 良率 ~50%, 差距从 5 年缩至 3 年。",
+    players:"关键公司: SK海力士 · 三星 · 美光 · 长鑫存储(国产)",
+    dom:2,domLabel:"国产 ★★(刚突破)",profit:"三巨头垄断90%+, 毛利率极高; 国产长鑫主要供国内昇腾, 体量小"},
+  r2:{tag:"第三圈 · 打包",c:"var(--c2)",title:"先进封装 CoWoS / 载板",cat:"封装",role:"把大脑和工作台封进一个盒子\"",
+    desc:"GPU+HBM 封在一起传海量数据。台积电独占产能 (英伟达占 50%+), 国内无 CoWoS 级替代, 最卡脖子。CoWoS 2026 翻倍, 2027 再翻倍。",
+    players:"关键公司: 台积电(CoWoS) · Ibiden/欣兴(载板) · 长电/通富(传统封测)",
+    dom:1,domLabel:"国产 ★(最卡脖子)",profit:"台积电独占利润, 国内封测厂做传统封装利润率远低"},
+  r3:{tag:"第四圈 · 装板",c:"var(--c3)",title:"PCB + MLCC 装板",cat:"装板",role:"把封装好的芯片装到机器里\"",
+    desc:"PCB 是主板芯片踩上面; MLCC 是板上小电容稳压滤波。AI 服务器用量暴增。沪电 + 深南 双寡头 (合计 ~70%)。",
+    players:"关键公司: 深南电路 · 沪电股份 · 生益科技(PCB) · 村田 · 三环(MLCC)",
+    dom:4,domLabel:"国产 ★★★★(强)",profit:"PCB 国产主导吃全球红利; MLCC 量大但高端仍靠村田"},
+  r4:{tag:"第五圈 · 让机器转起来",c:"var(--c4)",title:"电源 + 液冷",cat:"整机",role:"供电和降温\"",
+    desc:"GPU 一颗吃上千瓦, 电源链变精准低压; 风冷压不住 1000W 必须液冷。算力越强这层越要升级。英维克 + 三花 + 巨化 三家国产组合。",
+    players:"关键公司: MPS · Vicor · 杰华特(电源) · 英维克 · 三花 · 巨化(液冷) · Vertiv",
+    dom:4,domLabel:"国产 ★★★★(强)",profit:"液冷国产主导吃国内+出海; 电源中端量大, 高端仍靠海外"},
+  r5:{tag:"第六圈 · 联网",c:"var(--c5)",title:"光模块 / CPO",cat:"联网",role:"机器和机器之间说话\"",
+    desc:"几千台 GPU 一起算, 用光(激光)传数据。光模块是现在主流, CPO 是封在一起的下一代, 2026 刚量产。中际旭创 1.6T 占率全球第一。",
+    players:"关键公司: 中际旭创 · 新易盛 · 天孚通信 · 博通 · Marvell · 源杰 · 光库",
+    dom:5,domLabel:"国产 ★★★★★(全球龙头)",profit:"中国合计份额过半, 中际旭创 1.6T 市占率全球第一, 直接赚全球 AI 的钱"},
+  r6:{tag:"第七圈 · 工具与原料",c:"var(--c6)",title:"半导体设备 / 材料",cat:"设备材料",role:"做蛋糕的工具人和卖铲子的人\"",
+    desc:"6 圈都要用: 刻蚀、薄膜沉积、光刻、清洗、检测、抛光、硅片、电子特气、靶材、ABF 载板基板等。AI 算力扩产直接拉动设备材料订单。大基金三期重点投。",
+    players:"关键公司: 北方华创 · 中微 · 拓荆 · 华海清科 · 富创精密 · 沪硅产业 · 安集 · 雅克",
+    dom:3,domLabel:"国产 ★★★(部分突破, 多数仍卡)",profit:"6 圈同步扩产, 设备材料订单同时爆; 先进制程设备仍靠 ASML/AMAT, 国产替代早期但弹性最大"}
+};
+const rings=document.querySelectorAll('.ring');
+const el={tag:document.getElementById('tag'),title:document.getElementById('title'),role:document.getElementById('role'),desc:document.getElementById('desc'),players:document.getElementById('players'),meter:document.getElementById('meter')};
+const domColor={1:'#F87171',2:'#FB923C',3:'#FBBF24',4:'#34D399',5:'#5EEAD4'};
+function show(k){const d=data[k];el.tag.textContent=d.tag;el.tag.style.color=d.c;el.title.textContent=d.title;el.role.textContent=d.role;el.desc.textContent=d.desc;el.players.innerHTML=d.players;
+  el.meter.innerHTML=
+    '<div class="meter-row"><div class="ml">国产水平</div><div class="meter-bar"><div class="meter-fill" style="width:'+(d.dom*20)+'%;background:'+domColor[d.dom]+'"></div></div><div class="mv" style="font-size:14px;color:'+domColor[d.dom]+';letter-spacing:-1px">'+(d.domLabel.match(/★+/)||[""])[0]+'</div></div>'+
+    '<div class="meter-sub" style="color:'+domColor[d.dom]+'">'+d.domLabel.replace(/^国产\s*[★]+\s*/,'')+'</div>'+
+    '<div class="profit-row"><b>收益链</b>'+d.profit+'</div>';
+  rings.forEach(r=>r.classList.toggle('active',r.dataset.k===k));}
+rings.forEach(r=>{
+  const tgt=r.querySelector('div')||r;
+  tgt.style.pointerEvents='auto';
+  tgt.style.cursor='pointer';
+  tgt.addEventListener('click',()=>show(r.dataset.k));
+  tgt.addEventListener('mouseenter',()=>show(r.dataset.k));
+});
+document.querySelectorAll('.etf-tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.etf-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.etf-panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.pane).classList.add('active');
+  });
+});
+document.body.classList.add('anim-ready');
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+},{threshold:.08,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+setTimeout(()=>{document.querySelectorAll('.reveal:not(.in)').forEach(el=>el.classList.add('in'));},1200);
+show('r0');
+</script>
+</body>
+</html>
