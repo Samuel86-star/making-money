@@ -175,17 +175,20 @@ def daily_dragon_tiger(trade_date: str | None = None, min_net_buy: float = None)
         from datetime import date
         trade_date = date.today().isoformat()
 
+    # 实际字段格式 "2026-06-25 00:00:00",不是 "2026-06-25"
+    filter_date = trade_date if " " in trade_date else f"{trade_date} 00:00:00"
+
     params = {
         "reportName": "RPT_DAILYBILLBOARD_DETAILS",
         "columns": "ALL",
-        "filter": f'(TRADE_DATE=\'{trade_date}\')',
+        "filter": f"(TRADE_DATE='{filter_date}')",
         "pageNumber": "1", "pageSize": "100",
-        "sortColumns": "NET_BUY_AMT", "sortTypes": "-1",
+        "sortColumns": "BILLBOARD_NET_AMT", "sortTypes": "-1",
         "source": "WEB", "client": "WEB",
     }
     r = em_get(DRAGON_TIGER_URL, params=params, timeout=15)
     d = r.json()
     rows = d.get("result", {}).get("data", []) if d.get("result") else []
     if min_net_buy is not None:
-        rows = [row for row in rows if (row.get("NET_BUY_AMT") or 0) >= min_net_buy]
+        rows = [row for row in rows if (row.get("BILLBOARD_NET_AMT") or 0) >= min_net_buy]
     return {"data": rows, "total": len(rows), "date": trade_date}
