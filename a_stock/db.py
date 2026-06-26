@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS decisions (
     code            TEXT NOT NULL,
     name            TEXT,
     strategy        TEXT NOT NULL CHECK(strategy IN ('short', 'mid')),
-    action          TEXT NOT NULL CHECK(action IN ('buy', 'add', 'sell', 'close')),
+    action          TEXT NOT NULL CHECK(action IN ('buy', 'add', 'sell', 'close', 'reduce')),
     decision_date   TEXT NOT NULL,
     decision_time   TEXT,
     price           REAL NOT NULL,
@@ -23,8 +23,9 @@ CREATE TABLE IF NOT EXISTS decisions (
     plan_max_position_pct REAL,
     close_date      TEXT,
     close_price     REAL,
-    close_reason    TEXT CHECK(close_reason IN ('stop_loss', 'target', 'manual', 'expired')),
+    close_reason    TEXT CHECK(close_reason IN ('stop_loss', 'target', 'manual', 'expired', 'partial_take_profit', 'partial_stop_loss')),
     pnl_pct         REAL,
+    parent_id       INTEGER,
     created_at      TEXT DEFAULT (datetime('now')),
     updated_at      TEXT DEFAULT (datetime('now'))
 );
@@ -101,9 +102,58 @@ def conn(db_path):
         c.close()
 
 
+def _migrate_decisions_v2() -> None:
+    """Idempotent migration: add parent_id, update action CHECK, extend close_reason CHECK."""
+    with conn(cfg.DECISIONS_DB) as c:
+        cols = {row[1] for row in c.execute("PRAGMA table_info(decisions)").fetchall()}
+        if "parent_id" in cols:
+            return  # Already migrated
+
+        c.executescript("""
+            CREATE TABLE decisions_v2 (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                code            TEXT NOT NULL,
+                name            TEXT,
+                strategy        TEXT NOT NULL CHECK(strategy IN ('short', 'mid')),
+                action          TEXT NOT NULL CHECK(action IN ('buy', 'add', 'sell', 'close', 'reduce')),
+                decision_date   TEXT NOT NULL,
+                decision_time   TEXT,
+                price           REAL NOT NULL,
+                quantity        INTEGER NOT NULL,
+                amount          REAL,
+                reason          TEXT,
+                brief_snapshot_path TEXT,
+                plan_stop_loss      REAL,
+                plan_target         REAL,
+                plan_hold_days      INTEGER,
+                plan_max_position_pct REAL,
+                close_date      TEXT,
+                close_price     REAL,
+                close_reason    TEXT CHECK(close_reason IN ('stop_loss', 'target', 'manual', 'expired', 'partial_take_profit', 'partial_stop_loss')),
+                pnl_pct         REAL,
+                parent_id       INTEGER,
+                created_at      TEXT DEFAULT (datetime('now')),
+                updated_at      TEXT DEFAULT (datetime('now'))
+            );
+            INSERT INTO decisions_v2 SELECT
+                id, code, name, strategy, action, decision_date, decision_time,
+                price, quantity, amount, reason, brief_snapshot_path,
+                plan_stop_loss, plan_target, plan_hold_days, plan_max_position_pct,
+                close_date, close_price, close_reason, pnl_pct, NULL,
+                created_at, updated_at
+            FROM decisions;
+            DROP TABLE decisions;
+            ALTER TABLE decisions_v2 RENAME TO decisions;
+            CREATE INDEX IF NOT EXISTS idx_code ON decisions(code);
+            CREATE INDEX IF NOT EXISTS idx_strategy_date ON decisions(strategy, decision_date);
+            CREATE INDEX IF NOT EXISTS idx_open ON decisions(close_date);
+        """)
+
+
 def init_decisions_db() -> None:
     with conn(cfg.DECISIONS_DB) as c:
         c.executescript(DECISIONS_SCHEMA)
+    _migrate_decisions_v2()
 
 
 def init_screener_db() -> None:
@@ -114,7 +164,7 @@ def init_screener_db() -> None:
 def insert_decision(*, code, name=None, strategy, action, decision_date, price, quantity,
                     decision_time=None, reason=None, brief_snapshot_path=None,
                     plan_stop_loss=None, plan_target=None, plan_hold_days=None,
-                    plan_max_position_pct=None) -> int:
+                    plan_max_position_pct=None, parent_id=None) -> int:
     amount = price * quantity
     with conn(cfg.DECISIONS_DB) as c:
         cur = c.execute("""
@@ -122,12 +172,12 @@ def insert_decision(*, code, name=None, strategy, action, decision_date, price, 
             (code, name, strategy, action, decision_date, decision_time,
              price, quantity, amount,
              reason, brief_snapshot_path, plan_stop_loss, plan_target,
-             plan_hold_days, plan_max_position_pct)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+             plan_hold_days, plan_max_position_pct, parent_id)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (code, name, strategy, action, decision_date, decision_time,
               price, quantity, amount,
               reason, brief_snapshot_path, plan_stop_loss, plan_target,
-              plan_hold_days, plan_max_position_pct))
+              plan_hold_days, plan_max_position_pct, parent_id))
         return cur.lastrowid
 
 

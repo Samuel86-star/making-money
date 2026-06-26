@@ -5,7 +5,10 @@ import sys
 from datetime import date, datetime
 import a_stock.config as cfg
 import a_stock.db as db
-from a_stock.a_screen.decision_log import add_buy, add_add, close, update_plan, list_open, get
+from a_stock.a_screen.decision_log import (
+    add_buy, add_add, close, update_plan, list_open, get,
+    reduce_position, add_to_watchlist, remove_from_watchlist, list_watchlist,
+)
 from a_stock.a_screen.snapshot import load_snapshot
 
 
@@ -117,6 +120,33 @@ def cmd_show(args):
         print(f"  {k}: {row[k]}")
 
 
+def cmd_reduce(args):
+    new_id = reduce_position(args.parent_id, args.price, args.qty, args.reason)
+    row = get(new_id)
+    print(f"✓ 减仓 id={new_id}  parent={args.parent_id}  pnl={row['pnl_pct']:+.2f}%")
+
+
+def cmd_watchlist_add(args):
+    add_to_watchlist(args.code, name=args.name, theme=args.theme, note=args.note)
+    print(f"✓ 已加入 watchlist: {args.code}")
+
+
+def cmd_watchlist_remove(args):
+    remove_from_watchlist(args.code)
+    print(f"✓ 已从 watchlist 移除: {args.code}")
+
+
+def cmd_watchlist_list(args):
+    rows = list_watchlist()
+    if not rows:
+        print("watchlist 为空")
+        return
+    print(f"{'code':<8}  {'name':<12}  {'theme':<20}  {'note':<30}  {'added_at'}")
+    for r in rows:
+        print(f"{r['code']:<8}  {(r['name'] or ''):<12}  {(r['theme'] or ''):<20}  "
+              f"{(r['note'] or ''):<30}  {r['added_at']}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -166,6 +196,30 @@ def main():
     p_show = sub.add_parser("show")
     p_show.add_argument("id", type=int)
     p_show.set_defaults(func=cmd_show)
+
+    p_reduce = sub.add_parser("reduce")
+    p_reduce.add_argument("parent_id", type=int)
+    p_reduce.add_argument("--price", type=float, required=True)
+    p_reduce.add_argument("--qty", type=int, required=True)
+    p_reduce.add_argument("--reason", required=True, choices=["partial_take_profit", "partial_stop_loss", "manual"])
+    p_reduce.set_defaults(func=cmd_reduce)
+
+    p_watchlist = sub.add_parser("watchlist")
+    w_sub = p_watchlist.add_subparsers(dest="watchlist_cmd", required=True)
+
+    p_wl_add = w_sub.add_parser("add")
+    p_wl_add.add_argument("code")
+    p_wl_add.add_argument("--name")
+    p_wl_add.add_argument("--theme")
+    p_wl_add.add_argument("--note")
+    p_wl_add.set_defaults(func=cmd_watchlist_add)
+
+    p_wl_remove = w_sub.add_parser("remove")
+    p_wl_remove.add_argument("code")
+    p_wl_remove.set_defaults(func=cmd_watchlist_remove)
+
+    p_wl_list = w_sub.add_parser("list")
+    p_wl_list.set_defaults(func=cmd_watchlist_list)
 
     args = ap.parse_args()
     args.func(args)

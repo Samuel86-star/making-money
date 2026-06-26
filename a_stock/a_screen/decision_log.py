@@ -67,3 +67,50 @@ def get(decision_id: int):
     with db.conn(cfg.DECISIONS_DB) as c:
         return c.execute("SELECT * FROM decisions WHERE id=?",
                          (decision_id,)).fetchone()
+
+
+def reduce_position(parent_id: int, reduce_price: float, reduce_qty: int, reason: str) -> int:
+    """Partial close of a position lot. Creates a linked reduce row with pnl, closes it immediately."""
+    with db.conn(cfg.DECISIONS_DB) as c:
+        parent = c.execute(
+            "SELECT * FROM decisions WHERE id=? AND close_date IS NULL AND action IN ('buy', 'add')",
+            (parent_id,)
+        ).fetchone()
+    if not parent:
+        raise ValueError(f"no open buy/add decision {parent_id}")
+
+    pnl_pct = (reduce_price - parent["price"]) / parent["price"] * 100
+
+    new_id = db.insert_decision(
+        code=parent["code"], name=parent["name"], strategy=parent["strategy"],
+        action="reduce",
+        decision_date=datetime.now().strftime("%Y-%m-%d"),
+        decision_time=datetime.now().strftime("%H:%M:%S"),
+        price=reduce_price, quantity=reduce_qty,
+        reason=reason,
+        parent_id=parent_id,
+    )
+
+    db.update_decision_close(new_id, datetime.now().strftime("%Y-%m-%d"), reduce_price, reason, pnl_pct)
+
+    return new_id
+
+
+def add_to_watchlist(code: str, name: str | None = None, theme: str | None = None,
+                     note: str | None = None) -> None:
+    with db.conn(cfg.DECISIONS_DB) as c:
+        c.execute(
+            "INSERT OR REPLACE INTO watchlist (code, name, theme, note, added_at) "
+            "VALUES (?, ?, ?, ?, datetime('now'))",
+            (code, name, theme, note),
+        )
+
+
+def remove_from_watchlist(code: str) -> None:
+    with db.conn(cfg.DECISIONS_DB) as c:
+        c.execute("DELETE FROM watchlist WHERE code=?", (code,))
+
+
+def list_watchlist():
+    with db.conn(cfg.DECISIONS_DB) as c:
+        return c.execute("SELECT * FROM watchlist ORDER BY added_at DESC").fetchall()
