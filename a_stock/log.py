@@ -106,9 +106,13 @@ def cmd_list(args):
 
 def _list_all(strategy, recent):
     with db.conn(cfg.DECISIONS_DB) as c:
+        if strategy:
+            return c.execute(
+                "SELECT * FROM decisions WHERE strategy=? ORDER BY decision_date DESC LIMIT ?",
+                (strategy, recent)).fetchall()
         return c.execute(
-            "SELECT * FROM decisions WHERE strategy=? ORDER BY decision_date DESC LIMIT ?",
-            (strategy, recent)).fetchall()
+            "SELECT * FROM decisions ORDER BY decision_date DESC LIMIT ?",
+            (recent,)).fetchall()
 
 
 def cmd_show(args):
