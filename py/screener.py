@@ -169,8 +169,58 @@ def main():
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
+    if args.render_only:
+        render_html(args.date)
+        return
+
     strategies = ["short", "mid"] if args.strategy == "both" else [args.strategy]
     run(args.date, strategies, args.top_n, args.enrich_top, args.force)
+
+
+def render_html(trade_date: str):
+    """从 SQLite 读 daily_summary + candidate_history,渲染 report.html。"""
+    out_dir = cfg.DAILY_DIR / trade_date
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with db.conn(cfg.SCREENER_DB) as c:
+        sectors = c.execute(
+            "SELECT * FROM sector_history WHERE scan_date=? AND sector_type='industry' ORDER BY net_flow DESC LIMIT 15",
+            (trade_date,)).fetchall()
+        short = c.execute(
+            "SELECT * FROM candidate_history WHERE scan_date=? AND strategy='short' ORDER BY score DESC LIMIT 20",
+            (trade_date,)).fetchall()
+        mid = c.execute(
+            "SELECT * FROM candidate_history WHERE scan_date=? AND strategy='mid' ORDER BY score DESC LIMIT 20",
+            (trade_date,)).fetchall()
+
+    html = ['<!doctype html><html><head><meta charset="utf-8"><title>Screener Report</title>',
+            '<style>body{font-family:sans-serif;max-width:1200px;margin:20px auto;padding:0 20px;}',
+            'table{border-collapse:collapse;width:100%;margin:10px 0;}',
+            'th,td{border:1px solid #ddd;padding:6px 10px;text-align:left;}',
+            'th{background:#f5f5f5;}',
+            'h1,h2{color:#333;} .pos{color:#c00;} .neg{color:#0a0;}</style></head><body>']
+    html.append(f"<h1>Screener 日报 {trade_date}</h1>")
+
+    html.append("<h2>行业板块资金流 TOP15</h2><table><tr><th>行业</th><th>涨跌幅</th><th>净流入(亿)</th><th>领涨股</th></tr>")
+    for s in sectors:
+        nf = (s["net_flow"] or 0) / 1e8
+        html.append(f"<tr><td>{s['name']}</td><td>{s['change_pct']:+.2f}%</td>"
+                    f"<td>{nf:+.2f}</td><td>{s['leader_name'] or ''}</td></tr>")
+    html.append("</table>")
+
+    for strat_name, rows in [("短线 TOP20", short), ("中线 TOP20", mid)]:
+        html.append(f"<h2>{strat_name}</h2><table><tr><th>代码</th><th>名称</th><th>行业</th>"
+                    "<th>涨跌幅</th><th>净流入(亿)</th><th>PE</th><th>7日研报</th><th>评分</th></tr>")
+        for r in rows:
+            nf = (r["net_flow"] or 0) / 1e8
+            html.append(f"<tr><td>{r['code']}</td><td>{r['name'] or ''}</td><td>{r['sector'] or ''}</td>"
+                        f"<td>{r['change_pct']:+.2f}%</td><td>{nf:+.2f}</td>"
+                        f"<td>{r['pe_ttm'] or 0:.1f}</td><td>{r['report_count_7d'] or 0}</td>"
+                        f"<td><b>{r['score'] or 0:.1f}</b></td></tr>")
+        html.append("</table>")
+
+    html.append("</body></html>")
+    (out_dir / "report.html").write_text("\n".join(html))
+    print(f"✓ 渲染 → {out_dir / 'report.html'}")
 
 
 if __name__ == "__main__":
