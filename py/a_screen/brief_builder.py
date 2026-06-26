@@ -2,7 +2,7 @@
 from datetime import datetime
 from py.a_stock_data import (
     tencent_quote, eastmoney_concept_blocks, stock_fund_flow_120d,
-    eastmoney_reports, ths_eps_forecast, hsgt_realtime,
+    eastmoney_reports, ths_eps_forecast,
     ths_hot_reason,
 )
 import py.config as cfg
@@ -29,12 +29,6 @@ def build_snapshot(code: str, trade_date: str, trigger: str = "manual") -> dict:
         eps_list = eps_df.to_dict("records") if hasattr(eps_df, "to_dict") else []
     except Exception:
         eps_list = []
-
-    # 北向(容错)
-    try:
-        nb = hsgt_realtime()
-    except Exception:
-        nb = None
 
     # 5d/20d 累计资金
     fund_5d = sum(r.get("main", 0) for r in flows[:5])
