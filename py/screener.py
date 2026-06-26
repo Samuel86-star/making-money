@@ -31,7 +31,13 @@ def fetch_market_stocks(top_n: int = 200) -> list[dict]:
         f"&fltt=2&invt=2&fid=f62&fs={fs}&fields={fields}"
     )
     headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"}
-    r = requests.get(url, headers=headers, timeout=20)
+
+    def _do():
+        r = requests.get(url, headers=headers, timeout=20)
+        r.raise_for_status()
+        return r
+
+    r = retry(_do)
     d = r.json().get("data", {})
     out = []
     for row in d.get("diff", []):
@@ -48,7 +54,14 @@ def fetch_market_stocks(top_n: int = 200) -> list[dict]:
 
 
 def enrich(stocks: list[dict], strategy: str, trade_date: str) -> list[dict]:
-    """Step 4:em_get 防封逐股 enrichment。"""
+    """Step 4:em_get 防封逐股 enrichment(估值批量拉取)。"""
+    # 批量拉取 tencent_quote 一次
+    codes = [s["code"] for s in stocks]
+    try:
+        tq_batch = tencent_quote(codes)
+    except Exception:
+        tq_batch = {}
+
     enriched = []
     for s in stocks:
         code = s["code"]
@@ -64,8 +77,7 @@ def enrich(stocks: list[dict], strategy: str, trade_date: str) -> list[dict]:
             recent_7d = [r for r in reports if r.get("date", "") >= _date_offset(trade_date, -7)]
             s["report_count_7d"] = len(recent_7d)
 
-            # 估值(用 tq 单股查,本步只对 top N 调)
-            tq = tencent_quote([code]).get(code, {})
+            tq = tq_batch.get(code, {})
             s["pe_ttm"] = tq.get("pe_ttm", 0)
             s["pb"] = tq.get("pb", 0)
             s["mcap_yi"] = tq.get("mcap_yi", 0)
