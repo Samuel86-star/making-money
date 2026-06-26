@@ -111,19 +111,21 @@ def init_screener_db() -> None:
         c.executescript(SCREENER_SCHEMA)
 
 
-def insert_decision(*, code, name, strategy, action, decision_date, price, quantity,
-                    reason=None, brief_snapshot_path=None,
+def insert_decision(*, code, name=None, strategy, action, decision_date, price, quantity,
+                    decision_time=None, reason=None, brief_snapshot_path=None,
                     plan_stop_loss=None, plan_target=None, plan_hold_days=None,
                     plan_max_position_pct=None) -> int:
     amount = price * quantity
     with conn(cfg.DECISIONS_DB) as c:
         cur = c.execute("""
             INSERT INTO decisions
-            (code, name, strategy, action, decision_date, price, quantity, amount,
+            (code, name, strategy, action, decision_date, decision_time,
+             price, quantity, amount,
              reason, brief_snapshot_path, plan_stop_loss, plan_target,
              plan_hold_days, plan_max_position_pct)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (code, name, strategy, action, decision_date, price, quantity, amount,
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (code, name, strategy, action, decision_date, decision_time,
+              price, quantity, amount,
               reason, brief_snapshot_path, plan_stop_loss, plan_target,
               plan_hold_days, plan_max_position_pct))
         return cur.lastrowid
