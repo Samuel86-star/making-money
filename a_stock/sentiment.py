@@ -121,6 +121,67 @@ def compute_temp() -> dict:
     }
 
 
+def cycle_stage() -> dict:
+    """6阶段情绪周期 (抄 quantdash fetch_sentiment_cycle_snapshots.py:558-634).
+    退潮/冰点/修复/主升/试错/分歧. 用涨停池数据判断."""
+    from a_stock.a_stock_data import limit_up_pool, broken_board_pool
+    try:
+        zt = limit_up_pool()
+        zb = broken_board_pool()
+    except Exception:
+        return {"stage": "未知", "confidence": 0, "reason": "涨停池拉取失败"}
+
+    total_zt = zt.get("total", 0)
+    high_board = zt.get("high_board", 0)
+    first_board = zt.get("first_board", 0)
+    max_boards = max([zt.get("first_board", 0), zt.get("second_board", 0),
+                      zt.get("third_board", 0), zt.get("high_board", 0)] + [0])
+    broken_count = zb.get("total", 0)
+    broken_rate = (broken_count / total_zt * 100) if total_zt > 0 else 0
+    first_ratio = (first_board / total_zt * 100) if total_zt > 0 else 0
+
+    # 高位风险 (抄 quantdash fetch_sentiment_cycle_snapshots.py:483-514)
+    risk = "low"
+    if broken_rate >= 35 or high_board >= 2:
+        risk = "high"
+    elif broken_rate >= 20 or high_board >= 1:
+        risk = "medium"
+
+    # 阶段判定 (first-match, 抄 quantdash)
+    if risk == "high":
+        stage = "退潮"
+    elif max_boards <= 2 and total_zt < 20:
+        stage = "冰点"
+    elif broken_rate < 35 and total_zt > 0:
+        stage = "修复"
+    elif total_zt >= 5 and high_board >= 3 and max_boards >= 5:
+        stage = "主升"
+    elif first_ratio >= 60 or max_boards <= 4:
+        stage = "试错"
+    else:
+        stage = "分歧"
+
+    # confidence (简化)
+    conf = {"主升": 72, "修复": 68, "退潮": 75, "冰点": 70, "试错": 62, "分歧": 62}.get(stage, 50)
+    if risk == "low":
+        conf += 6
+    elif risk == "high":
+        conf += 8
+    conf = min(95, conf)
+
+    return {
+        "stage": stage,
+        "confidence": conf,
+        "risk_level": risk,
+        "limit_up_total": total_zt,
+        "high_board": high_board,
+        "max_boards": max_boards,
+        "broken_count": broken_count,
+        "broken_rate": round(broken_rate, 1),
+        "first_board_ratio": round(first_ratio, 1),
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true")

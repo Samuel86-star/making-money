@@ -206,3 +206,64 @@ def daily_dragon_tiger(trade_date: str | None = None, min_net_buy: float = None)
     if min_net_buy is not None:
         rows = [row for row in rows if (row.get("BILLBOARD_NET_AMT") or 0) >= min_net_buy]
     return {"data": rows, "total": len(rows), "date": trade_date}
+
+def limit_up_pool(trade_date: str | None = None) -> dict:
+    """涨停池 (东财 getTopicZTPool). 抄 quantdash fetch_sentiment_cycle_snapshots.py:307-343.
+    返回 {first_board, second_board, third_board, high_board, total, data:[...]}"""
+    from datetime import date as _date
+    if trade_date is None:
+        trade_date = _date.today().strftime("%Y%m%d")
+    else:
+        trade_date = trade_date.replace("-", "")
+    url = "https://push2ex.eastmoney.com/getTopicZTPool"
+    params = {
+        "ut": "7eea3edcaed734bea9cbfc24409ed989",
+        "dpt": "wz.ztzt",
+        "Pageindex": "0",
+        "pagesize": "100",
+        "date": trade_date,
+    }
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"}
+    try:
+        r = em_get(url, params=params, headers=headers, timeout=15)
+        d = r.json()
+        pool = d.get("data", {}).get("pool", [])
+    except Exception:
+        return {"first_board": 0, "second_board": 0, "third_board": 0,
+                "high_board": 0, "total": 0, "data": []}
+
+    # 按连板数分桶 (lbc 字段)
+    first = sum(1 for s in pool if (s.get("lbc") or 0) == 1)
+    second = sum(1 for s in pool if (s.get("lbc") or 0) == 2)
+    third = sum(1 for s in pool if (s.get("lbc") or 0) == 3)
+    high = sum(1 for s in pool if (s.get("lbc") or 0) >= 4)
+    return {
+        "first_board": first, "second_board": second,
+        "third_board": third, "high_board": high,
+        "total": len(pool), "data": pool,
+    }
+
+
+def broken_board_pool(trade_date: str | None = None) -> dict:
+    """炸板池 (东财 getTopicZBPool). 抄 quantdash fetch_sentiment_cycle_snapshots.py:395-422."""
+    from datetime import date as _date
+    if trade_date is None:
+        trade_date = _date.today().strftime("%Y%m%d")
+    else:
+        trade_date = trade_date.replace("-", "")
+    url = "https://push2ex.eastmoney.com/getTopicZBPool"
+    params = {
+        "ut": "7eea3edcaed734bea9cbfc24409ed989",
+        "dpt": "wz.ztzt",
+        "Pageindex": "0",
+        "pagesize": "100",
+        "date": trade_date,
+    }
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"}
+    try:
+        r = em_get(url, params=params, headers=headers, timeout=15)
+        d = r.json()
+        pool = d.get("data", {}).get("pool", [])
+    except Exception:
+        return {"total": 0, "data": []}
+    return {"total": len(pool), "data": pool}
