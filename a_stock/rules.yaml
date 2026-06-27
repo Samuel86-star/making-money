@@ -1,0 +1,91 @@
+# 监控规则 - 由 monitor.py 加载
+rules:
+  # === 持仓加仓规则 ===
+  - name: "消费ETF加仓-阶梯1"
+    code: "515650"
+    condition: { field: "price", op: "<=", value: 0.95 }
+    action: "add"
+    shares: 7000
+    max_trigger_per_day: 1
+    cooldown_min: 60
+    active: true
+    note: "跌穿0.95, 加7000股, 计划区间0.93-0.95"
+
+  - name: "消费ETF加仓-阶梯2"
+    code: "515650"
+    condition: { field: "price", op: "<=", value: 0.93 }
+    action: "add"
+    shares: 3000
+    max_trigger_per_day: 1
+    cooldown_min: 60
+    active: true
+    note: "跌穿0.93, 再加3000股"
+
+  - name: "恒瑞医药加仓"
+    code: "600276"
+    condition: { field: "price", op: "between", value: [47, 48] }
+    action: "add"
+    shares: 100
+    max_trigger_per_day: 1
+    cooldown_min: 120
+    active: true
+    note: "回踩47-48区间, 加100股"
+
+  - name: "通信ETF试仓-周一14:30后"
+    code: "515880"
+    condition: { field: "price", op: "<=", value: 1.70 }
+    action: "add"
+    shares: 3000
+    max_trigger_per_day: 1
+    cooldown_min: 240
+    active: true
+    note: "周一14:30后若<=1.70, 试仓3000股"
+    extra: { weekday_min: 0, time_after: "14:30" }
+
+  - name: "通信ETF加码-下探1.60"
+    code: "515880"
+    condition: { field: "price", op: "<=", value: 1.60 }
+    action: "add"
+    shares: 2000
+    max_trigger_per_day: 1
+    cooldown_min: 240
+    active: true
+    note: "继续下探, 加码2000股"
+
+  # === 风控规则 ===
+  - name: "单标的日内-7%紧急"
+    condition: { field: "change_pct", op: "<=", value: -7 }
+    action: "info"
+    max_trigger_per_day: 3
+    cooldown_min: 30
+    active: true
+    note: "任意持仓日内-7%, 立即检查"
+    applies_to: "all_holdings"
+
+  - name: "组合日内-3%警告"
+    condition: { field: "portfolio_change_pct", op: "<=", value: -3 }
+    action: "info"
+    max_trigger_per_day: 2
+    cooldown_min: 60
+    active: true
+    note: "组合整体日内跌超3%"
+
+  # === 持仓获利规则 ===
+  - name: "创业板ETF减仓-破4.00"
+    code: "159915"
+    condition: { field: "price", op: "<=", value: 4.00 }
+    action: "reduce"
+    shares: 1000
+    max_trigger_per_day: 1
+    cooldown_min: 0
+    active: true
+    note: "回撤到4.00, 止盈1000股"
+
+  - name: "恒瑞止盈-破55"
+    code: "600276"
+    condition: { field: "price", op: ">=", value: 55.0 }
+    action: "info"
+    max_trigger_per_day: 1
+    cooldown_min: 0
+    active: true
+    note: "中线目标55, 触发考虑减仓"

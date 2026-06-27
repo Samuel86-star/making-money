@@ -1,0 +1,98 @@
+[
+  {
+    "date": "2026-07-15",
+    "kind": "data",
+    "name": "二季度GDP/社零",
+    "impact": "high",
+    "watch": "消费/政策预期",
+    "action": "关注消费ETF"
+  },
+  {
+    "date": "2026-07-22",
+    "kind": "policy",
+    "name": "政治局会议(年中)",
+    "impact": "high",
+    "watch": "财政/货币/地产/消费",
+    "action": "事件前 7/15-7/21 降仓"
+  },
+  {
+    "date": "2026-07-30",
+    "kind": "fed",
+    "name": "美联储FOMC",
+    "impact": "high",
+    "watch": "鲍威尔讲话/利率",
+    "action": "关注北向"
+  },
+  {
+    "date": "2026-08-15",
+    "kind": "earnings",
+    "name": "恒瑞医药中报",
+    "impact": "high",
+    "watch": "创新药占比/营收",
+    "action": "8/15前后持有"
+  },
+  {
+    "date": "2026-08-30",
+    "kind": "earnings",
+    "name": "创业板权重股中报",
+    "impact": "mid",
+    "watch": "宁德/东财/迈瑞",
+    "action": "影响159915"
+  },
+  {
+    "date": "2026-09-30",
+    "kind": "checkpoint",
+    "name": "Q3 强平再平衡",
+    "impact": "self",
+    "watch": "组合偏离度",
+    "action": "若>85%股票则减仓"
+  },
+  {
+    "date": "2026-10-01",
+    "kind": "holiday",
+    "name": "国庆假期",
+    "impact": "low",
+    "watch": "假期外围",
+    "action": "提前规划"
+  },
+  {
+    "date": "2026-10-15",
+    "kind": "earnings",
+    "name": "三季报预告披露截止",
+    "impact": "high",
+    "watch": "全市场预喜率",
+    "action": "调仓窗口"
+  },
+  {
+    "date": "2026-10-31",
+    "kind": "earnings",
+    "name": "三季报正式披露",
+    "impact": "high",
+    "watch": "业绩验证",
+    "action": "持仓复盘"
+  },
+  {
+    "date": "2026-11-05",
+    "kind": "fed",
+    "name": "美联储FOMC + 大选",
+    "impact": "high",
+    "watch": "美国政策+利率",
+    "action": "关注半导体"
+  },
+  {
+    "date": "2026-12-15",
+    "kind": "fed",
+    "name": "美联储FOMC(末次)",
+    "impact": "high",
+    "watch": "2027展望",
+    "action": "影响全年估值"
+  },
+  {
+    "date": "2026-12-31",
+    "kind": "checkpoint",
+    "name": "年终目标验收",
+    "impact": "self",
+    "watch": "100k目标",
+    "action": "复盘 + 计划明年"
+  }
+]
