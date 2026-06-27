@@ -1,17 +1,106 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## A股决策支持系统 (主项目)
 
-## What this is
+> **角色: 我是这个用户的理财顾问。** 不替下单, 推送后用户决策。
+> 完整状态/目标/持仓/工具见 `data/PROJECT_STATE.md`. 任何会话开头先读这个。
 
-Two self-contained HTML files live in `analysis/technology/`:
-- `AI-Compute-Industry-Chain.html` — interactive Chinese-language visualization of the AI 算力 (compute) industry chain.
+### 目标
+2026-12-31 前 78,788 → 100,000 (+26.9% in 185 天)。
+P(达成) 蒙特卡洛基线 0.1% → 必须主动加仓+择时。
+
+### 架构
+
+```
+a_stock/
+├── monitor.py          【Cron 5min】价格规则+异动检测
+├── scheduler.py        【Cron 1min】多时间点调度 (早盘/盘后)
+├── notifier.py         Mac 弹窗 (被各模块调用)
+│
+├── morning_scan.py     【09:35/09:50】全市场扫描→评分→推送候选
+├── close_scan.py       【15:10】盘后落盘 (板块/情绪/持仓评分)
+├── anomaly.py          火箭发射/高台跳水 (monitor调用)
+├── anomaly_holdings_loader.py  异动监控目标加载器
+├── sector_rotation.py  板块轮动持续性分析
+├── sentiment.py        情绪温度计
+├── self_review.py      门禁系统 (deep_research输出校验)
+│
+├── goal_sim.py         CLI: 蒙特卡洛目标概率
+├── risk_metrics.py     CLI: 组合风险指标
+├── position_sizer.py   CLI: 凯利仓位计算
+├── deep_research.py    CLI: DCF+Comps深研
+├── macro_calendar.py   CLI: 宏观日历
+├── log.py              CLI: 决策记录
+├── stats.py            CLI: 交易统计
+├── todo.py             CLI: 待办系统
+│
+├── config.py           配置
+├── db.py               DB schema + helpers
+├── screener.py         市场筛选 (morning_scan调用)
+├── ohlcv.py            OHLCV加载器
+├── rules.yaml          监控规则
+├── setup_cron.sh       Cron安装脚本
+│
+├── scorers/            多因子评分 (技术35%/资金35%/基本面10%/板块10%/事件10%)
+│   ├── total_scorer.py         评分入口
+│   ├── technical_scorer.py     技术面
+│   ├── moneyflow_scorer.py     资金面
+│   ├── fundamental_scorer.py   基本面
+│   ├── sector_scorer.py        板块
+│   └── event_scorer.py         事件
+│
+└── a_stock_data/       数据源层 (东财push2/腾讯/同花顺/新浪财报)
+    ├── eastmoney.py    东财push2 (主力数据源)
+    ├── tencent.py      腾讯行情
+    ├── ths.py          同花顺热点/研报
+    ├── sectors.py      板块排行
+    ├── financials.py   新浪财报 (含get_financials)
+    └── _common.py      共享工具 (限流/缓存/重试)
+```
+
+### 工作模式
+脚本(cron)盯盘 → 命中规则 → Mac 弹窗 → 用户在券商app下单。
+我不直接下单, 也不"AI 替判断" — 决策权在用户。
+
+### 关键入口
+```bash
+.venv/bin/python -m a_stock.goal_sim         # 蒙特卡洛
+.venv/bin/python -m a_stock.risk_metrics     # 组合风险
+.venv/bin/python -m a_stock.monitor --dry-run # 监控dry-run
+.venv/bin/python -m a_stock.log add 515650 --strategy mid --price 0.95 --qty 7000
+.venv/bin/python -m a_stock.scheduler session # 交易时段
+.venv/bin/python -m a_stock.sentiment        # 情绪温度
+.venv/bin/python -m a_stock.deep_research 600276 --json  # 深研
+./a_stock/setup_cron.sh install              # 装cron
+```
+
+### 沟通
+- Caveman 模式
+- 数字优先, 不确定就说不确定
+- 任何建议必带仓位%/止损价/目标价
+
+### DB
+- 主库: `data/decisions.sqlite`
+- 写入: `python -m a_stock.log {buy|add|close|reduce|plan|watchlist}`
+- 不要删持仓! 600276/159915 等是真实数据, 测试用 T_ 前缀
+
+### 测试
+```bash
+.venv/bin/python -m pytest tests/ -q
+```
+
+---
+
+## 附属项目: AI Compute Industry Chain (analysis/technology/)
+
+Two self-contained HTML files in `analysis/technology/`:
+- `AI-Compute-Industry-Chain.html` — interactive Chinese-language visualization of the AI 算力 industry chain.
 - `HBM-supply-chain.html` — HBM 国产化设备链 deep-research dossier.
 
 No build step, no dependencies, no framework, no package manager. Open either file directly
-in a browser; edit in any text editor. There are no test, lint, or build commands to run.
+in a browser; edit in any text editor.
 
-## Architecture
+### Architecture
 
 Everything lives in one file: markup, CSS (in `<style>`), and JS (in `<script>`) at the
 end of `<body>`. Vanilla JS, no framework. Four visual sections share one data source:
@@ -25,62 +114,9 @@ end of `<body>`. Vanilla JS, no framework. Four visual sections share one data s
 4. **Static sections** — flow chain, three-keyword cards (PCB/CPO/MLCC), and insight
    block; these are hand-written HTML, not data-driven.
 
-### The single source of truth
+The single source of truth: `data` (an object keyed `r0`–`r5`) drives both the ring info
+panel and the matrix cards. Each entry: `tag`, `c` (CSS color var), `title`, `role`,
+`desc`, `players`, `dom` (1–5), `domLabel`, and `profit`.
 
-`data` (an object keyed `r0`–`r5`) drives both the ring info panel and the matrix cards.
-Each entry has: `tag`, `c` (CSS color var), `title`, `role`, `desc`, `players`,
-`dom` (国产水平 1–5), `domLabel` (e.g. `"国产 ★★（有但受制裁）"`), and `profit`.
-`oneLiner` is a parallel object adding the matrix card subtitle.
-
-When adding/editing a link in the chain, change it **once** in `data` — both the ring
-panel and the matrix card render from it.
-
-### Conventions worth preserving
-
-- **Domestic-level color scale** (`domColor` map): `1=#dc2626` red (weakest) →
-  `5=#0891b2` teal (strongest). Meter bar widths are `dom*20%`. The matrix card
-  border-left class `lv1`–`lv5` mirrors this. Keep all three in sync when adding a level.
-- **Ring hit-targets**: the `.ring` circles have `pointer-events:none`; the inner label
-  `<div>` re-enables events (see the comment near line 258). This prevents an outer ring
-  from swallowing clicks meant for an inner ring. Don't move events back onto `.ring`.
-- **Star ratings** (`★★`) are embedded in `domLabel` and parsed out via regex
-  (`d.domLabel.match(/★+/)`) for display — keep the `★` characters if you edit a label.
-- CSS custom properties (`--c0`…`--c5`, `--bg`, `--ink`, etc.) are defined on `:root`
-  and referenced in both CSS and the `data[k].c` values.
-
-## Content note
-
-The page is dated 2026/06/24 and carries a "不构成投资建议" (not investment advice)
-disclaimer in the footer. Company names, market-share claims, and dates are editorial
-content — verify against current sources before treating as fact.
-
----
-
-## A股决策支持系统 (新主项目, 2026-06-27 起)
-
-> **角色: 我是这个用户的理财顾问。** 不替下单, 推送后用户决策。
-> 完整状态/目标/持仓/工具见 `data/PROJECT_STATE.md`. 任何会话开头先读这个。
-
-### 目标
-2026-12-31 前 78,788 → 100,000 (+26.9% in 185 天)。
-P(达成) 蒙特卡洛基线 0.1% → 必须主动加仓+择时。
-
-### 工具 (`a_stock/`)
-9 个核心脚本, 见 `a_stock/MONITOR_README.md`:
-- `goal_sim` 蒙特卡洛, `risk_metrics` 风险, `position_sizer` 凯利
-- `macro_calendar` 日历, `sentiment` 情绪, `notifier` 推送
-- `monitor` 主循环, `rules.yaml` 规则, `setup_cron.sh` 安装
-
-### 工作模式
-脚本(cron)盯盘 → 命中规则 → Mac 弹窗 → 用户在券商app下单。
-我不直接下单, 也不"AI 替判断" — 决策权在用户。
-
-### 沟通
-- Caveman 模式 (用户指定)
-- 数字优先, 不确定就说不确定
-- 任何建议必带仓位%/止损价/目标价
-
-### DB
-- 主库: `data/decisions.sqlite`
-- 写入: `python -m a_stock.log {buy|add|close|reduce|plan|watchlist}`
-- 不要删持仓! 600276/159915 等是真实数据, 测试用 T_ 前缀
+Content note: dated 2026/06/24, carries "不构成投资建议" disclaimer. Company names,
+market-share claims, and dates are editorial — verify before treating as fact.
