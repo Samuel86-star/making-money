@@ -29,10 +29,13 @@ TRADING_SESSIONS = [
 
 
 def _is_trading_time(now: datetime | None = None) -> bool:
-    """交易时段判断 (含集合竞价, 排除午休). 修复 kimi 跨午休 bug."""
+    """交易时段判断 (含集合竞价, 排除午休). 修复 kimi 跨午休 bug.
+    考虑调休上班周末 (scheduler.MAKE_WORK_2026)."""
     now = now or datetime.now()
     if now.weekday() >= 5:
-        return False
+        from a_stock.scheduler import MAKE_WORK_2026
+        if now.date() not in MAKE_WORK_2026:
+            return False
     t = now.time()
     for start, end in TRADING_SESSIONS:
         if start <= t <= end:

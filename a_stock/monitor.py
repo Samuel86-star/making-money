@@ -82,6 +82,9 @@ def _load_holdings() -> list[dict]:
         a = agg[c]
         a["cost"] = (a["cost"] * a["qty"] + r["price"] * r["quantity"]) / (a["qty"] + r["quantity"])
         a["qty"] += r["quantity"]
+        # 后加仓如果更新了止损, 取最新
+        if r["plan_stop_loss"] is not None:
+            a["stop_loss"] = r["plan_stop_loss"]
     return list(agg.values())
 
 

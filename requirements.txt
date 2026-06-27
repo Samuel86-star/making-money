@@ -1,0 +1,11 @@
+# A股决策支持系统 (make-money) 依赖
+# 安装: .venv/bin/python -m pip install -r requirements.txt
+certifi>=2026
+charset-normalizer>=3
+fastdtw>=0.3
+idna>=3
+numpy>=2
+pandas>=3
+pyarrow>=24
+PyYAML>=6
+requests>=2

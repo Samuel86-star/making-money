@@ -1,6 +1,7 @@
 """蒙特卡洛目标概率: 给定当前组合, 模拟 N 条路径, 算 P(达目标)."""
 import argparse
 import json
+import math
 import sqlite3
 import random
 from datetime import date, datetime
@@ -133,7 +134,7 @@ def simulate(positions: list[dict], cash: float, target: float,
                     # log return ~ N(mu - sigma^2/2, sigma)
                     z = random.gauss(0, 1)
                     ret = mus[i] - 0.5 * sigmas[i] ** 2 + sigmas[i] * z
-                    values[i] *= (1 + ret)  # 简化, 实际用 exp(ret)
+                    values[i] *= math.exp(ret)
                 cash_sim *= (1 + cash_daily)
             stock_final = sum(values)
             finals.append(stock_final + cash_sim)

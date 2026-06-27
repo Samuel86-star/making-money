@@ -98,7 +98,7 @@ def compute(positions: list[dict], cash: float = 36144.0, risk_free: float = 0.0
         "portfolio_vol_annual": round(adj_vol, 4),
         "daily_vol": round(daily_vol, 4),
         "sharpe": round(sharpe, 2),
-        "sortino": round(sharpe, 2),
+        "sortino": round(sharpe, 2),  # FIXME: 暂用 Sharpe 替代, 需真实现下行波动率
         "var_95_1d": round(var_95_1d),
         "var_95_1d_pct": round(var_95_1d / total * 100, 2),
         "max_dd_5d_95": round(max_dd_5d_95),

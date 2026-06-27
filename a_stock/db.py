@@ -88,6 +88,15 @@ CREATE TABLE IF NOT EXISTS daily_summary (
     brief_snapshots     INTEGER,
     status              TEXT DEFAULT 'ok'
 );
+CREATE TABLE IF NOT EXISTS dragon_tiger (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    trade_date      TEXT NOT NULL,
+    code            TEXT NOT NULL,
+    name            TEXT,
+    reason          TEXT,
+    created_at      TEXT DEFAULT (datetime('now')),
+    UNIQUE(trade_date, code)
+);
 """
 
 
@@ -227,3 +236,14 @@ def upsert_daily_summary(date, **fields) -> None:
             VALUES ({placeholders})
             ON CONFLICT(date) DO UPDATE SET {update_cols}
         """, values)
+
+
+def upsert_dragon_tiger(trade_date: str, code: str, name: str = "", reason: str = "") -> None:
+    """写入/更新龙虎榜记录."""
+    with conn(cfg.SCREENER_DB) as c:
+        c.execute("""
+            INSERT INTO dragon_tiger (trade_date, code, name, reason)
+            VALUES (?,?,?,?)
+            ON CONFLICT(trade_date, code) DO UPDATE SET
+                name=excluded.name, reason=excluded.reason
+        """, (trade_date, code, name, reason))

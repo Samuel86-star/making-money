@@ -28,12 +28,12 @@ def _north_flow() -> tuple[float, str]:
 
 
 def _dragon_tiger_count(trade_date: str) -> tuple[int, str]:
-    """龙虎榜条数: 越活跃=情绪高, 简化从 screener DB 拉."""
+    """龙虎榜条数: 越活跃=情绪高, 从 screener DB 的 dragon_tiger 表拉."""
     try:
         with sqlite3.connect(str(cfg.SCREENER_DB)) as c:
             row = c.execute("""
-                SELECT COUNT(*) FROM sector_history
-                WHERE scan_date=? AND sector_type='dragon_tiger'
+                SELECT COUNT(*) FROM dragon_tiger
+                WHERE trade_date=?
             """, (trade_date,)).fetchone()
             return row[0] if row else 0, "ok"
     except Exception:

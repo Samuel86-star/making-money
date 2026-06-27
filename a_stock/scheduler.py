@@ -39,9 +39,12 @@ def _init_db() -> None:
 
 # 6段交易时段 (抄 aiagents-stock smart_monitor_deepseek.py:82-140)
 def trading_session(now: datetime | None = None) -> dict:
-    """返回 {session, can_trade}. 6段: 休市/集合竞价/上午盘/午休/下午盘/尾盘/盘后."""
+    """返回 {session, can_trade}. 6段: 休市/集合竞价/上午盘/午休/下午盘/尾盘/盘后.
+    考虑调休上班周末 (MAKE_WORK_2026)."""
     now = now or datetime.now()
-    if now.weekday() >= 5 or is_holiday(now.date()):
+    if now.weekday() >= 5 and now.date() not in MAKE_WORK_2026:
+        return {"session": "休市", "can_trade": False}
+    if is_holiday(now.date()):
         return {"session": "休市", "can_trade": False}
     t = now.time()
     if dtime(9, 0) <= t < dtime(9, 30):
@@ -58,18 +61,41 @@ def trading_session(now: datetime | None = None) -> dict:
 
 
 # 节假日判断 (补 aiagents-stock 未实现的部分)
-# 内置 2026 下半年节假日 (simplified, 无外部依赖)
+# 2026年数据来自国务院办公厅国办发明电〔2025〕7号
 HOLIDAYS_2026 = {
-    # 国庆
-    date(2026, 10, 1), date(2026, 10, 2), date(2026, 10, 5),
-    date(2026, 10, 6), date(2026, 10, 7), date(2026, 10, 8),
-    # 元旦
-    date(2026, 12, 31),
+    # 元旦 (1/1 周四 - 1/3 周六, 1/4 周日补班)
+    date(2026, 1, 1), date(2026, 1, 2),
+    # 春节 (2/15 周日 - 2/23 周一)
+    date(2026, 2, 16), date(2026, 2, 17), date(2026, 2, 18),
+    date(2026, 2, 19), date(2026, 2, 20), date(2026, 2, 23),
+    # 清明 (4/4 周六 - 4/6 周一)
+    date(2026, 4, 6),
+    # 劳动节 (5/1 周五 - 5/5 周二)
+    date(2026, 5, 1), date(2026, 5, 4), date(2026, 5, 5),
+    # 端午 (6/19 周五 - 6/21 周日)
+    date(2026, 6, 19),
+    # 中秋 (9/25 周五 - 9/27 周日)
+    date(2026, 9, 25),
+    # 国庆 (10/1 周四 - 10/7 周三)
+    date(2026, 10, 1), date(2026, 10, 2),
+    date(2026, 10, 5), date(2026, 10, 6), date(2026, 10, 7),
+}
+
+# 调休上班: 周末变工作日 (市场开市)
+MAKE_WORK_2026 = {
+    date(2026, 1, 4),    # 元旦调休 (周日)
+    date(2026, 2, 14),   # 春节调休 (周六)
+    date(2026, 2, 28),   # 春节调休 (周六)
+    date(2026, 5, 9),    # 劳动节调休 (周六)
+    date(2026, 9, 20),   # 国庆调休 (周日)
+    date(2026, 10, 10),  # 国庆调休 (周六)
 }
 
 
 def is_holiday(d: date) -> bool:
-    """节假日判断 (内置2026, 可扩展)."""
+    """节假日判断. 调休上班周末不算假日."""
+    if d in MAKE_WORK_2026:
+        return False
     return d in HOLIDAYS_2026
 
 
@@ -108,9 +134,10 @@ def mark_run(key: str) -> None:
 def due_jobs() -> list[str]:
     """返回当前时刻该跑的任务 key (匹配 HH:MM 且当日未跑)."""
     now = datetime.now()
-    if not trading_session(now)["can_trade"] and now.time() < dtime(15, 5):
-        # 盘前盘后任务允许, 盘中非交易时段不跑
-        pass
+    # 非交易时段: 仅允许 15:00-15:30 盘后落盘 (close_scan)
+    if not trading_session(now)["can_trade"]:
+        if not (dtime(15, 0) <= now.time() <= dtime(15, 30)):
+            return []
     now_hm = now.strftime("%H:%M")
     today = now.strftime("%Y-%m-%d")
     jobs = []
