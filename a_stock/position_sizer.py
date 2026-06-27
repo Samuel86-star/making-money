@@ -38,7 +38,8 @@ def _vol_weighted(positions_vols: list[float]) -> list[float]:
 
 
 def suggest(c: Candidate, total_capital: float, method: str = "kelly",
-            risk_per_trade: float = 0.01, kelly_fraction: float = 0.5) -> dict:
+            risk_per_trade: float = 0.01, kelly_fraction: float = 0.5,
+            score: float | None = None) -> dict:
     stop_pct = (c.price - c.stop_loss) / c.price
     target_pct = (c.target_price - c.price) / c.price
     payoff = target_pct / stop_pct if stop_pct > 0 else 0
@@ -53,6 +54,14 @@ def suggest(c: Candidate, total_capital: float, method: str = "kelly",
         frac = 0.10
         rationale = "vol 不适用单标的"
 
+    # Phase3: 多因子评分缩放仓位 (<40→0 / 40-60→半 / 60-80→满 / >=80→超配)
+    scale = 1.0
+    if score is not None:
+        from a_stock.scorers import score_to_position_scale
+        scale = score_to_position_scale(score)
+        frac = frac * scale
+        rationale += f" ×评分{score:.0f}(×{scale})"
+
     frac = min(frac, 0.30)
     amount = total_capital * frac
     shares = max(int(amount / c.price / 100) * 100, 0)
@@ -62,6 +71,7 @@ def suggest(c: Candidate, total_capital: float, method: str = "kelly",
     return {
         "code": c.code, "name": c.name, "method": method,
         "rationale": rationale,
+        "score": score,
         "suggested_frac": round(frac, 4),
         "suggested_amount": round(amount),
         "shares": shares,
