@@ -1,9 +1,10 @@
-"""主监控循环: 拉行情 → 比对规则 → 推送 + 写日志.
+"""主监控循环: 拉行情 → 比对规则 → 异动检测 → 推送 + 写日志.
 由 cron 每 5 分钟调用一次 (交易时段 9:30-11:30, 13:00-15:00)."""
 import argparse
 import json
 import re
 import sqlite3
+import threading
 import urllib.request
 from datetime import datetime, date, time as dtime, timedelta
 from pathlib import Path
@@ -16,6 +17,10 @@ STATE_FILE = cfg.DATA_DIR / "monitor_state.json"
 RULES_FILE = Path(__file__).parent / "rules.yaml"
 
 CANDIDATE_CODES = ["515650", "600276", "300059", "159801", "159915", "515880"]
+
+# 非阻塞锁防重入 (抄 aiagents-stock sector_strategy_scheduler.py:98-108)
+# LLM/异动分析易超时, 下个时间点到了上一个没完, blocking=False 直接跳过
+_run_lock = threading.Lock()
 
 
 def _live_prices(codes: list[str]) -> dict[str, dict]:
@@ -179,6 +184,16 @@ def _ensure_monitor_log_table() -> None:
 
 
 def run(dry_run: bool = False) -> dict:
+    # 非阻塞锁: 上一次没跑完就跳过 (防任务堆积)
+    if not _run_lock.acquire(blocking=False):
+        return {"fired": 0, "rules_checked": 0, "error": "skipped_previous_running"}
+    try:
+        return _run_impl(dry_run)
+    finally:
+        _run_lock.release()
+
+
+def _run_impl(dry_run: bool) -> dict:
     _ensure_monitor_log_table()
     state = _load_state()
     rules = _load_rules()
@@ -267,12 +282,61 @@ def run(dry_run: bool = False) -> dict:
                       json.dumps(p, ensure_ascii=False, default=str), body))
         print(f"🔔 {title} | {body}")
 
+    # === 异动检测 (Phase 2) ===
+    # 火箭发射/高台跳水, 抄 kimi 算法修午休bug
+    anomaly_fired = _check_anomalies(holdings, state, dry_run)
+
     state["last_run"] = datetime.now().isoformat()
     _save_state(state)
 
     return {"fired": len(fired), "rules_checked": len(rules),
             "holdings": len(holdings),
+            "anomaly_fired": anomaly_fired,
             "portfolio_change": round(portfolio_change, 2)}
+
+
+def _check_anomalies(holdings: list[dict], state: dict, dry_run: bool) -> int:
+    """异动检测: 火箭发射/高台跳水. 每标的一天最多推2次."""
+    from a_stock.anomaly import check as anomaly_check, _is_trading_time
+    if not _is_trading_time():
+        return 0
+
+    fired = 0
+    # 持仓 + watchlist
+    from a_stock.anomaly_holdings_loader import load_targets
+    targets = load_targets()
+
+    for t in targets:
+        code = t["code"]
+        key = f"anomaly({code})"
+        # 一天最多2次异动推送
+        if not _check_cooldown(state, key, max_per_day=2, cooldown_min=15):
+            continue
+        try:
+            sig = anomaly_check(code, t.get("name", ""))
+        except Exception as e:
+            print(f"⚠ 异动检测 {code} 失败: {e}")
+            continue
+        if not sig:
+            continue
+
+        title = f"{sig['type']}: {sig['name']}"
+        body = (f"价格 {sig['price']:.3f} | 3分钟涨速 {sig['speed_3min']:+.2f}% | "
+                f"量比 {sig['vol_ratio']:.1f} | {sig['trend']}")
+        is_urgent = "跳水" in sig["type"]
+        if not dry_run:
+            push(title, body, sound=is_urgent)
+            with sqlite3.connect(str(cfg.DECISIONS_DB)) as c:
+                c.execute("""
+                    INSERT INTO monitor_log (ts, rule, code, payload, body)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (datetime.now().isoformat(), sig["type"], code,
+                      json.dumps(sig, ensure_ascii=False, default=str), body))
+        _record_trigger(state, key, code,
+                        {"speed": sig["speed_3min"], "vol_ratio": sig["vol_ratio"]})
+        print(f"🚨 {title} | {body}")
+        fired += 1
+    return fired
 
 
 def main():
@@ -283,7 +347,8 @@ def main():
     print(f"\n检查 {result.get('rules_checked', 0)} 规则, "
           f"持仓 {result.get('holdings', 0)} 只, "
           f"组合日内 {result.get('portfolio_change', 0):+.2f}%, "
-          f"触发 {result['fired']} 条")
+          f"规则触发 {result['fired']} 条, "
+          f"异动触发 {result.get('anomaly_fired', 0)} 条")
 
 
 if __name__ == "__main__":
