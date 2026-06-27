@@ -4,6 +4,37 @@ import requests
 from a_stock.a_stock_data._common import UA
 
 
+def get_financials(code: str) -> dict:
+    """获取最新一期关键财务指标 (净利同比/ROE). 返回 dict 供 fundamental_scorer."""
+    try:
+        rows = sina_financial_report(code, report_type="lrb", num=1)
+        if not rows:
+            return {}
+        latest = rows[0]
+        # 净利同比: 字段名如 "净利润_同比" 或 "归属于母公司所有者的净利润_同比"
+        ni_yoy = None
+        for k in ("净利润_同比", "归属于母公司所有者的净利润_同比", "营业利润_同比"):
+            if k in latest:
+                ni_yoy = latest[k]
+                break
+        # ROE 在利润表不存在, 从资产负债表拿
+        roe = None
+        try:
+            bs = sina_financial_report(code, report_type="fzb", num=1)
+            if bs:
+                roe = bs[0].get("净资产收益率")
+        except Exception:
+            pass
+        result = {}
+        if ni_yoy is not None:
+            result["net_profit_yoy"] = float(str(ni_yoy).replace("%", ""))
+        if roe is not None:
+            result["roe"] = float(str(roe).replace("%", ""))
+        return result
+    except Exception:
+        return {}
+
+
 def sina_financial_report(code: str, report_type: str = "lrb", num: int = 8) -> list[dict]:
     """
     新浪财报三表。

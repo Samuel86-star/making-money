@@ -12,9 +12,6 @@ from a_stock.a_stock_data.eastmoney import (
 )
 from a_stock.a_stock_data.ths import ths_hot_reason, ths_eps_forecast, hsgt_realtime
 from a_stock.a_stock_data.sectors import industry_comparison
-from a_stock.a_stock_data.news import eastmoney_stock_news, eastmoney_global_news
-from a_stock.a_stock_data.pdf import download_pdf
-from a_stock.a_stock_data.financials import sina_financial_report
-from a_stock.a_stock_data.filings import cninfo_announcements
+from a_stock.a_stock_data.financials import get_financials
 
 __version__ = "1.0.0"

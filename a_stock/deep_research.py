@@ -129,12 +129,16 @@ def research(code: str, name: str = "", price: float | None = None,
         veto = score == -100
         veto_reason = "ST/暴雷" if veto else ""
 
-    # 动量
+    # 动量 (简化: 从 parquet 直接算, 不依赖 strategies 子系统)
     momentum_60d = 0
     try:
-        from a_stock.strategies.runner import build_indicators
-        ind = build_indicators(code, name)
-        momentum_60d = ind.get("momentum_60d", 0)
+        import pandas as pd
+        f = cfg.OHLCV_DIR / f"{code}.parquet"
+        if f.exists():
+            df = pd.read_parquet(f).tail(120)
+            closes = df["Close"].tolist()
+            if len(closes) >= 60:
+                momentum_60d = (closes[-1] - closes[-60]) / closes[-60] * 100
     except Exception:
         pass
 
