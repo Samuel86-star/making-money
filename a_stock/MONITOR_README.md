@@ -13,18 +13,35 @@
 
 当前持仓: 5 只 (恒瑞/消费ETF/创业板/芯片/东财) + 1 候选 (通信ETF)
 
-## 二、4 个核心工具 (本周末新增)
+## 二、工具链
 
 ```
 a_stock/
-├── goal_sim.py        蒙特卡洛  →  P(到100k) 多少
-├── risk_metrics.py    组合风险  →  Sharpe/MaxDD/集中度
-├── position_sizer.py  凯利公式  →  每个标的建议仓位
-├── sentiment.py       情绪温度  →  0-100 分
-├── macro_calendar.py  宏观日历  →  政治局/中报/FOMC
-├── monitor.py         监控主循环 →  规则命中推送
-├── notifier.py        Mac 推送  →  osascript 弹窗
-└── rules.yaml         监控规则  →  可热改
+├── monitor.py         主监控循环 (价格规则+异动)
+├── scheduler.py       多时间点调度 (早盘/盘后)
+├── notifier.py        Mac 推送
+│
+├── morning_scan.py    早盘扫描 09:35/09:50
+├── close_scan.py      盘后落盘 15:10
+├── anomaly.py         火箭发射/高台跳水
+├── sector_rotation.py 板块轮动持续性
+├── sentiment.py       情绪温度 0-100
+├── self_review.py     门禁系统
+│
+├── goal_sim.py        蒙特卡洛
+├── risk_metrics.py    组合风险
+├── position_sizer.py  凯利公式
+├── deep_research.py   DCF+Comps深研
+├── macro_calendar.py  宏观日历
+├── log.py             决策记录
+│
+├── config.py          配置
+├── db.py              DB schema
+├── rules.yaml         监控规则
+├── setup_cron.sh      Cron安装
+│
+├── scorers/           多因子评分 (技术35%/资金35%/基本面10%/板块10%/事件10%)
+└── a_stock_data/      数据源层
 ```
 
 ## 三、运行命令

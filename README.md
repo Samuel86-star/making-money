@@ -82,14 +82,35 @@ python -m a_stock.stats --code 000858
 ### Utility Scripts
 
 ```bash
-# Download 1-year OHLCV for all A-shares (via yfinance)
-python -m a_stock.download-ohlcv
+# Monte Carlo: P(达目标)
+python -m a_stock.goal_sim
 
-# Fetch A-share list from East Money
-python -m a_stock.fetch-ashare-list
+# 组合风险
+python -m a_stock.risk_metrics
 
-# Fetch trending stocks
-python -m a_stock.fetch-trending
+# 情绪温度
+python -m a_stock.sentiment
+
+# 深度研究 (DCF+Comps)
+python -m a_stock.deep_research 600276 --json
+
+# 宏观日历
+python -m a_stock.macro_calendar list
+
+# 决策记录
+python -m a_stock.log list
+
+# 待办系统
+python -m a_stock.todo list
+
+# 交易统计
+python -m a_stock.stats
+
+# 监控 dry-run
+python -m a_stock.monitor --dry-run
+
+# 调度器
+python -m a_stock.scheduler session
 ```
 
 ## Architecture
