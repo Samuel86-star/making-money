@@ -53,3 +53,34 @@ panel and the matrix card render from it.
 The page is dated 2026/06/24 and carries a "不构成投资建议" (not investment advice)
 disclaimer in the footer. Company names, market-share claims, and dates are editorial
 content — verify against current sources before treating as fact.
+
+---
+
+## A股决策支持系统 (新主项目, 2026-06-27 起)
+
+> **角色: 我是这个用户的理财顾问。** 不替下单, 推送后用户决策。
+> 完整状态/目标/持仓/工具见 `data/PROJECT_STATE.md`. 任何会话开头先读这个。
+
+### 目标
+2026-12-31 前 78,788 → 100,000 (+26.9% in 185 天)。
+P(达成) 蒙特卡洛基线 0.1% → 必须主动加仓+择时。
+
+### 工具 (`a_stock/`)
+9 个核心脚本, 见 `a_stock/MONITOR_README.md`:
+- `goal_sim` 蒙特卡洛, `risk_metrics` 风险, `position_sizer` 凯利
+- `macro_calendar` 日历, `sentiment` 情绪, `notifier` 推送
+- `monitor` 主循环, `rules.yaml` 规则, `setup_cron.sh` 安装
+
+### 工作模式
+脚本(cron)盯盘 → 命中规则 → Mac 弹窗 → 用户在券商app下单。
+我不直接下单, 也不"AI 替判断" — 决策权在用户。
+
+### 沟通
+- Caveman 模式 (用户指定)
+- 数字优先, 不确定就说不确定
+- 任何建议必带仓位%/止损价/目标价
+
+### DB
+- 主库: `data/decisions.sqlite`
+- 写入: `python -m a_stock.log {buy|add|close|reduce|plan|watchlist}`
+- 不要删持仓! 600276/159915 等是真实数据, 测试用 T_ 前缀

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "5365924a",
+    "title": "测试 Mac 推送",
+    "due": null,
+    "priority": "high",
+    "context": "运行 notifier test 验证弹窗",
+    "command": "python -m a_stock.notifier test",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.306415"
+  },
+  {
+    "id": "03dc1540",
+    "title": "装 cron 监控 (周一前)",
+    "due": null,
+    "priority": "high",
+    "context": "自动跑 monitor",
+    "command": "./a_stock/setup_cron.sh install",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.306670"
+  },
+  {
+    "id": "9b6ca3b7",
+    "title": "周一开盘前检查 rules.yaml 阈值",
+    "due": null,
+    "priority": "mid",
+    "context": "根据周末舆情调整",
+    "command": "cat a_stock/rules.yaml",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.306781"
+  },
+  {
+    "id": "8149b70e",
+    "title": "周一 14:30 后评估 515880 试仓",
+    "due": null,
+    "priority": "high",
+    "context": "≤1.70 加 3000 股",
+    "command": "python -m a_stock.monitor --dry-run",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.306875"
+  },
+  {
+    "id": "d4430c93",
+    "title": "7/15 前评估 515650 消费 ETF 加仓",
+    "due": "2026-07-15",
+    "priority": "mid",
+    "context": "跌到 0.93-0.95 加仓",
+    "command": "python -m a_stock.position_sizer --method kelly",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.306957"
+  },
+  {
+    "id": "547ef86f",
+    "title": "7/15-7/21 政治局前减仓准备",
+    "due": "2026-07-20",
+    "priority": "high",
+    "context": "减仓到 70%",
+    "command": "",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307032"
+  },
+  {
+    "id": "7d433175",
+    "title": "7/22 政治局会议结果评估",
+    "due": "2026-07-22",
+    "priority": "high",
+    "context": "看财政/消费政策",
+    "command": "python -m a_stock.macro_calendar list --days 3",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307109"
+  },
+  {
+    "id": "633b68a9",
+    "title": "8/15 恒瑞中报持仓决策",
+    "due": "2026-08-15",
+    "priority": "high",
+    "context": "中报占比 >63.5% 则加仓",
+    "command": "python -m a_stock.monitor --dry-run",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307184"
+  },
+  {
+    "id": "37c18dbc",
+    "title": "8/30 创业板权重股中报",
+    "due": "2026-08-30",
+    "priority": "mid",
+    "context": "影响 159915",
+    "command": "",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307266"
+  },
+  {
+    "id": "546a65f6",
+    "title": "9/30 Q3 强平再平衡检查",
+    "due": "2026-09-30",
+    "priority": "high",
+    "context": "若股票 >85% 减到 70%",
+    "command": "python -m a_stock.risk_metrics",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307352"
+  },
+  {
+    "id": "7f5c6f06",
+    "title": "10/15 三季报预告披露截止",
+    "due": "2026-10-15",
+    "priority": "high",
+    "context": "调仓窗口",
+    "command": "",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307439"
+  },
+  {
+    "id": "85059833",
+    "title": "10/31 三季报正式披露复盘",
+    "due": "2026-10-31",
+    "priority": "high",
+    "context": "持仓验证",
+    "command": "",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307527"
+  },
+  {
+    "id": "595c146f",
+    "title": "11/5 美联储 + 美国大选",
+    "due": "2026-11-05",
+    "priority": "high",
+    "context": "关注半导体",
+    "command": "",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307620"
+  },
+  {
+    "id": "d00396bc",
+    "title": "12/15 美联储末次 FOMC",
+    "due": "2026-12-15",
+    "priority": "high",
+    "context": "2027 展望",
+    "command": "",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307721"
+  },
+  {
+    "id": "66dd891e",
+    "title": "12/31 年终 100k 目标验收",
+    "due": "2026-12-31",
+    "priority": "high",
+    "context": "复盘 + 明年计划",
+    "command": "python -m a_stock.goal_sim",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307823"
+  },
+  {
+    "id": "3b92f05c",
+    "title": "每周日: 跑 goal_sim + risk + sentiment",
+    "due": null,
+    "priority": "mid",
+    "context": "周度复盘",
+    "command": "python -m a_stock.goal_sim && python -m a_stock.risk_metrics",
+    "status": "pending",
+    "created_at": "2026-06-27T15:12:12.307939"
+  }
+]
