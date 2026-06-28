@@ -3,20 +3,31 @@
 > 2026-06-28 · 审查范围: commits 3a02fce..HEAD (a_stock/strategies/ 全包 + morning_scan 接入 + 测试)
 > 方法: code-review 技能, 8 finder angles + 1-vote 验证 (recall-biased)
 > 985 行新增, 14 文件
+> **状态: 已修复 (commit f85734b, 2026-06-28)** — #1/#3/#4/#5/#6/#7 全修, #2 设计如此不动
 
 ## 发现汇总
 
 7 个发现, 按严重度排序。验证结果: 4 CONFIRMED, 3 PLAUSIBLE (含 2 latent + 1 cosmetic)。
 
-| # | 严重度 | 文件:行 | 验证 | 现修? |
-|---|--------|---------|------|-------|
-| 1 | 高 | registry.py:30 | CONFIRMED | ✅ 应修 |
-| 2 | 中 | morning_scan.py:57 | CONFIRMED (有意设计) | 待定 |
-| 3 | 中 | morning_scan.py:60 | CONFIRMED | ✅ 应修 |
-| 4 | 中 | runner.py:59 | PLAUSIBLE | ✅ 应修 |
-| 5 | 低 | runner.py:85 | PLAUSIBLE (latent) | 缓 |
-| 6 | 低 | runner.py:95 | PLAUSIBLE (latent-future) | 缓 |
-| 7 | 低 | signals.py:44 | CONFIRMED (cosmetic) | 缓 |
+| # | 严重度 | 文件:行 | 验证 | 处置 |
+|---|--------|---------|------|------|
+| 1 | 高 | registry.py:30 | CONFIRMED | ✅ 已修 f85734b |
+| 2 | 中 | morning_scan.py:57 | CONFIRMED (有意设计) | ⏸ 不动 (设计如此) |
+| 3 | 中 | morning_scan.py:60 | CONFIRMED | ✅ 已修 f85734b |
+| 4 | 中 | runner.py:59 | PLAUSIBLE | ✅ 已修 f85734b |
+| 5 | 低 | runner.py:85 | PLAUSIBLE (latent) | ✅ 已修 f85734b |
+| 6 | 低 | runner.py:95 | PLAUSIBLE (latent-future) | ✅ 已修 f85734b |
+| 7 | 低 | signals.py:44 | CONFIRMED (cosmetic) | ✅ 已修 f85734b |
+
+## 修复结果 (2026-06-28, commit f85734b)
+
+- **测试:** 90 passed, 16 skipped (baseline 77 → +13 新边界测试, 0 回归)
+- **新测试覆盖:** 坏子类不崩 / prev_close=0 / 并列边界跨 PYTHONHASHSEED / 长进程注入清理 / sector 共享 / top_reason 平局
+- **每条新测试 revert fix 后必失败** (证明真抓 bug)
+- **dry-run:** monitor 正常 (9规则/6持仓); morning_scan 策略层经子进程跨 3 个 PYTHONHASHSEED 验证确定
+- **2 处合理 adapt (已报告):**
+  - #6 用 sentinel `_NOT_COMPUTED` 区分"未算"vs"算了得 None" (md 原代码 `is None` 会重算, 与"只算一次"矛盾)
+  - #7 `max((gen), default=-1)` 加括号修 Python 语法 (md 原代码 SyntaxError)
 
 ---
 
@@ -307,13 +318,22 @@
 
 ## 修复后自检清单
 
-- [ ] #1 registry.py: try 包实例化循环 + `_scanned` 无条件置 True
-- [ ] #4 runner.py: build_indicators prev_close<=0 守卫
-- [ ] #3 morning_scan.py: scored_codes 改 sorted list
-- [ ] #5 runner.py: run_all 开头清 _rank/_sector_result
-- [ ] #6 runner.py: 去 break, sector_result 算一次共享
-- [ ] #7 signals.py: `>=` 改 `>`, 平局保留先到
-- [ ] #2 不动 (设计如此)
-- [ ] 全部改完: `.venv/bin/python -m pytest tests/ -q` → 应 ≥77 passed 16 skipped
-- [ ] 新增边界测试覆盖: 坏子类 / prev_close=0 / 并列边界 / 长进程注入
-- [ ] 不要碰持仓真实数据 (600276/159915 等), 测试用 T_ 前缀
+- [x] #1 registry.py: try 包实例化循环 + `_scanned` 无条件置 True
+- [x] #4 runner.py: build_indicators prev_close<=0 守卫
+- [x] #3 morning_scan.py: scored_codes 改 sorted list
+- [x] #5 runner.py: run_all 开头清 _rank/_sector_result
+- [x] #6 runner.py: 去 break, sector_result 算一次共享
+- [x] #7 signals.py: `>=` 改 `>`, 平局保留先到
+- [x] #2 不动 (设计如此)
+- [x] 全部改完: `.venv/bin/python -m pytest tests/ -q` → 90 passed 16 skipped (≥77 ✓)
+- [x] 新增边界测试覆盖: 坏子类 / prev_close=0 / 并列边界 / 长进程注入 (+13 测试)
+- [x] 不要碰持仓真实数据 (600276/159915 等), 测试用 T_ 前缀
+
+## 修复完成 (2026-06-28)
+
+- **Commit:** `f85734b` fix(strategies): code-review #1/#3/#4/#5/#6/#7
+- **文件:** registry.py / runner.py / morning_scan.py / signals.py + 3 测试文件 + 本 md
+- **测试:** 90 passed, 16 skipped (baseline 77 → +13 边界测试, 0 回归)
+- **每条新测试 revert fix 后必失败**, 证明真抓 bug
+- **2 处 adapt (已报告, 非 bug):** #6 sentinel `_NOT_COMPUTED` (md 原 `is None` 会重算); #7 `max((...),default=-1)` 加括号修 Python 语法
+- **dry-run:** monitor 正常; morning_scan 策略层跨 PYTHONHASHSEED 确定性验证通过 (网络受限非代码问题)
