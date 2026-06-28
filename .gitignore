@@ -29,6 +29,14 @@ data/screen/daily/
 data/screen/briefs/
 data/decisions.sqlite
 data/screener.sqlite
+data/scheduler.sqlite
+data/sector_rotation.sqlite
+data/anomaly_ticks.sqlite
+data/monitor_state.json
+data/sentiment_state.json
+data/self_review_issues.json
+data/goal_sim_history.json
+data/logs/
 data/backup/
 data/.cache/
 data/holidays.json
