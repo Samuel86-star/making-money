@@ -31,16 +31,28 @@ def scan(top_n: int = 20, score_top: int = 5, dry_run: bool = False) -> dict:
 def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
     print(f"⏳ 早盘扫描 @ {datetime.now().strftime('%H:%M:%S')}")
 
-    # 1. 全市场拉资金流 top (现有 screener, 东财push2)
+    # 1. 全市场拉资金流 top — 降级链: 东财push2(主) → 新浪(备) → no_market_data
+    source = "东财push2"
     try:
         stocks = fetch_market_stocks(top_n=top_n)
     except Exception as e:
-        print(f"⚠ 拉取市场数据异常: {e}")
+        print(f"⚠ 东财push2 异常: {e}")
         stocks = []
     if not stocks:
-        print("⚠ 拉取市场数据失败, 跳过本次扫描")
+        # 东财失败 → 新浪备用源 (真非东财, 东财挂时不受影响)
+        print("  → 降级新浪备用源")
+        try:
+            from a_stock.a_stock_data.sina import fetch_market_fund_flow_rank
+            stocks = fetch_market_fund_flow_rank(top_n=top_n)
+            if stocks:
+                source = "新浪(备用)"
+        except Exception as e:
+            print(f"⚠ 新浪备用源异常: {e}")
+            stocks = []
+    if not stocks:
+        print("⚠ 东财+新浪均失败, 跳过本次扫描")
         return {"error": "no_market_data"}
-    print(f"  拉到 {len(stocks)} 只候选 (资金流 top{top_n})")
+    print(f"  拉到 {len(stocks)} 只候选 (资金流 top{top_n}, 来源:{source})")
 
     # === 策略层 (Signal Bridge): 策略候选 + screener 候选并集 ===
     strategy_codes = set()
