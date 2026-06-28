@@ -55,3 +55,49 @@ def test_aggregate_top_reason_is_highest_confidence():
 
 def test_aggregate_empty():
     assert aggregate([]) == []
+
+
+from a_stock.strategies.base import StrategyMeta, BaseStrategy, limit_pct
+
+
+def test_limit_pct_main_board():
+    assert limit_pct("600276") == 10.0
+    assert limit_pct("000001") == 10.0
+
+
+def test_limit_pct_gem_star():
+    assert limit_pct("300059") == 20.0  # 创业板
+    assert limit_pct("688981") == 20.0  # 科创板
+
+
+def test_limit_pct_etf():
+    # 60/68 开头按 20%, ETF 5/1 开头主板 10%
+    assert limit_pct("515650") == 10.0
+
+
+def test_base_evaluate_swallows_exception():
+    """signals 抛错 → evaluate 返回 [], 不传播."""
+    class BoomStrategy(BaseStrategy):
+        META = StrategyMeta("boom", 0.5, "炸")
+        def filter(self, code, name):
+            return True
+        def signals(self, code, name):
+            raise RuntimeError("炸了")
+
+    sigs = BoomStrategy().evaluate("T_001", "X")
+    assert sigs == []
+
+
+def test_base_evaluate_filter_blocks_signals():
+    """filter False → 不跑 signals."""
+    class FilterStrategy(BaseStrategy):
+        META = StrategyMeta("filt", 0.5, "筛")
+        called = False
+        def filter(self, code, name):
+            return False
+        def signals(self, code, name):
+            FilterStrategy.called = True
+            return []
+
+    FilterStrategy().evaluate("T_001", "X")
+    assert FilterStrategy.called is False
