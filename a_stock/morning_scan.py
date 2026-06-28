@@ -32,9 +32,13 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
     print(f"⏳ 早盘扫描 @ {datetime.now().strftime('%H:%M:%S')}")
 
     # 1. 全市场拉资金流 top (现有 screener, 东财push2)
-    stocks = fetch_market_stocks(top_n=top_n)
+    try:
+        stocks = fetch_market_stocks(top_n=top_n)
+    except Exception as e:
+        print(f"⚠ 拉取市场数据异常: {e}")
+        stocks = []
     if not stocks:
-        print("⚠ 拉取市场数据失败")
+        print("⚠ 拉取市场数据失败, 跳过本次扫描")
         return {"error": "no_market_data"}
     print(f"  拉到 {len(stocks)} 只候选 (资金流 top{top_n})")
 
