@@ -101,3 +101,16 @@ def test_base_evaluate_filter_blocks_signals():
 
     FilterStrategy().evaluate("T_001", "X")
     assert FilterStrategy.called is False
+
+
+def test_registry_get_all_returns_strategies():
+    """registry 扫描目录后, 至少能 import 不报错 (策略文件此时还没建, 只验扫描不炸)."""
+    from a_stock.strategies import registry
+    registry._scan()  # 此时策略文件未建, 应返回空不报错
+    assert isinstance(registry.get_all(), list)
+
+
+def test_registry_get_unknown_returns_none():
+    from a_stock.strategies import registry
+    registry._scan()
+    assert registry.get("nonexistent_strategy") is None
