@@ -54,7 +54,7 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
 
     # 2. 多因子评分 — 策略候选 ∪ screener top10
     scored = []
-    scored_codes = strategy_codes | {s["code"] for s in stocks[:10]}
+    scored_codes = sorted(strategy_codes | {s["code"] for s in stocks[:10]})
     # 建 code→stock 映射 (策略产出的 code 可能不在 screener 前10, 用其 code 查 stock)
     stock_map = {s["code"]: s for s in stocks}
     for code in scored_codes:

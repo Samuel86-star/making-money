@@ -47,6 +47,9 @@ def build_indicators(code: str) -> dict | None:
     closes = df["close"]
     last = df.iloc[-1]
     prev = df.iloc[-2] if len(df) >= 2 else last
+    # 数据异常守卫: A 股合法价不为 0; prev_close<=0 = parquet 缺口/异常填充
+    if prev["close"] <= 0 or last["close"] <= 0:
+        return None
     vol_ma5 = df["volume"].iloc[-6:-1].mean() if len(df) >= 6 else df["volume"].mean()
     ind = {
         "df": df,
@@ -77,22 +80,32 @@ def run_all(candidates: list) -> list:
     注入资金流排名 + 板块门到对应策略实例."""
     from a_stock.strategies.registry import get_all
 
+    strategies = get_all()
+    # 清上次注入残留 (防长进程/repl 里陈旧 rank/sector 读)
+    for st in strategies:
+        if hasattr(st, "_rank"):
+            st._rank = None
+        if hasattr(st, "_sector_result"):
+            st._sector_result = None
+
     # 注入资金流排名 (candidates 顺序即净流入排名)
     rank_map = {c["code"]: i + 1 for i, c in enumerate(candidates) if c.get("code")}
-    strategies = get_all()
     for st in strategies:
         if hasattr(st, "_rank"):
             st._rank = rank_map
 
     # 注入板块轮动结果 (市场级, 全候选共享, 避免每候选重算)
+    _NOT_COMPUTED = object()  # sentinel: 区分"未算"与"算了得 None", 防止 None 时重算
+    sector_result = _NOT_COMPUTED
     for st in strategies:
         if hasattr(st, "_sector_result"):
-            try:
-                from a_stock.sector_rotation import analyze as _sr_analyze
-                st._sector_result = _sr_analyze()
-            except Exception:
-                st._sector_result = None
-            break  # 只需注入一次, 同一实例
+            if sector_result is _NOT_COMPUTED:
+                try:
+                    from a_stock.sector_rotation import analyze as _sr_analyze
+                    sector_result = _sr_analyze()
+                except Exception:
+                    sector_result = None
+            st._sector_result = sector_result  # 共享同一结果, 只算一次
 
     all_signals = []
     for c in candidates:

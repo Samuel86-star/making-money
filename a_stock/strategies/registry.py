@@ -27,9 +27,13 @@ def _scan() -> None:
             if (isinstance(attr, type) and issubclass(attr, BaseStrategy)
                     and attr is not BaseStrategy
                     and attr.__module__ == mod.__name__):
-                inst = attr()
-                _REGISTRY[inst.META.name] = inst
-    _scanned = True
+                try:
+                    inst = attr()
+                    _REGISTRY[inst.META.name] = inst
+                except Exception as e:
+                    print(f"⚠ 策略 {attr.__name__} 实例化失败, 跳过: {e}")
+                    continue
+        _scanned = True  # 无条件置 True, 即使中途有策略炸, 不让 get_all 反复重崩
 
 
 def get_all() -> list:

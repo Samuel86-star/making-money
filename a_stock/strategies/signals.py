@@ -40,7 +40,7 @@ def aggregate(signals: list) -> list:
         v.total_confidence += s.confidence
         v.strategies.append(s.strategy)
         v.signals.append(s)
-        # top_reason 取当前最高 confidence 那条
-        if s.confidence >= max(sig.confidence for sig in v.signals):
+        # top_reason 取当前最高 confidence 那条; 平局 (>不>=) 保留先到, 跨次稳定
+        if s.confidence > max((sig.confidence for sig in v.signals[:-1]), default=-1):
             v.top_reason = s.reason
     return sorted(by_code.values(), key=lambda v: -v.total_confidence)
