@@ -12,6 +12,7 @@ _scanned = False
 
 def _scan() -> None:
     """扫描 strategies/ 下所有非下划线非骨架模块, 收集 BaseStrategy 子类实例."""
+    global _scanned
     _REGISTRY.clear()
     import a_stock.strategies as pkg
     for _, modname, _ in pkgutil.iter_modules(pkg.__path__):
