@@ -5,6 +5,7 @@ import json
 import re
 import sqlite3
 import threading
+import traceback
 import urllib.request
 from datetime import datetime, date, time as dtime, timedelta
 from pathlib import Path
@@ -15,12 +16,31 @@ from a_stock.notifier import push
 
 STATE_FILE = cfg.DATA_DIR / "monitor_state.json"
 RULES_FILE = Path(__file__).parent / "rules.yaml"
+MONITOR_ERROR_LOG = cfg.DATA_DIR / "monitor_errors.jsonl"
 
 CANDIDATE_CODES = ["515650", "600276", "300059", "159801", "159915", "515880"]
 
 # 非阻塞锁防重入 (抄 aiagents-stock sector_strategy_scheduler.py:98-108)
 # LLM/异动分析易超时, 下个时间点到了上一个没完, blocking=False 直接跳过
 _run_lock = threading.Lock()
+
+
+def _log_error(module: str, func: str, exc: Exception) -> None:
+    """追加结构化错误日志到 monitor_errors.jsonl + push 通知."""
+    record = {
+        "ts": datetime.now().isoformat(),
+        "module": module,
+        "function": func,
+        "error": str(exc),
+        "traceback": traceback.format_exc(),
+    }
+    try:
+        with open(str(MONITOR_ERROR_LOG), "a") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception:
+        pass  # 日志写入失败不再递归报错
+    # 严重错误推送到桌面
+    push("⚠ monitor异常", f"[{module}] {func}: {str(exc)[:120]}", sound=True)
 
 
 def _live_prices(codes: list[str]) -> dict[str, dict]:
@@ -66,6 +86,7 @@ def _live_prices(codes: list[str]) -> dict[str, dict]:
 
 def _load_holdings() -> list[dict]:
     conn = sqlite3.connect(str(cfg.DECISIONS_DB))
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.row_factory = sqlite3.Row
     rows = conn.execute("""
         SELECT code, name, price, quantity, plan_stop_loss
@@ -174,6 +195,7 @@ def _check_extra(rule: dict) -> bool:
 
 def _ensure_monitor_log_table() -> None:
     with sqlite3.connect(str(cfg.DECISIONS_DB)) as c:
+        c.execute("PRAGMA journal_mode=WAL")
         c.execute("""
             CREATE TABLE IF NOT EXISTS monitor_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -197,149 +219,156 @@ def run(dry_run: bool = False) -> dict:
 
 
 def _run_impl(dry_run: bool) -> dict:
-    _ensure_monitor_log_table()
-    state = _load_state()
-    rules = _load_rules()
-    holdings = _load_holdings()
-    codes = list({h["code"] for h in holdings} | set(CANDIDATE_CODES))
-    prices = _live_prices(codes)
-    if not prices:
-        return {"fired": 0, "rules_checked": 0, "error": "no_prices"}
+    try:
+        _ensure_monitor_log_table()
+        state = _load_state()
+        rules = _load_rules()
+        holdings = _load_holdings()
+        codes = list({h["code"] for h in holdings} | set(CANDIDATE_CODES))
+        prices = _live_prices(codes)
+        if not prices:
+            return {"fired": 0, "rules_checked": 0, "error": "no_prices"}
 
-    port_value, port_prev = 0, 0
-    for h in holdings:
-        if h["code"] in prices:
-            p = prices[h["code"]]
-            port_value += p["price"] * h["qty"]
-            port_prev += p["prev_close"] * h["qty"]
-    portfolio_change = (port_value - port_prev) / port_prev * 100 if port_prev else 0
-
-    fired = []
-    for rule in rules:
-        if not rule.get("active", True):
-            continue
-        if not _check_extra(rule):
-            continue
-
-        if rule.get("applies_to") == "all_holdings":
-            for h in holdings:
-                if h["code"] not in prices:
-                    continue
+        port_value, port_prev = 0, 0
+        for h in holdings:
+            if h["code"] in prices:
                 p = prices[h["code"]]
-                if _eval_condition(rule["condition"], p["price"], p["change_pct"]):
-                    key = f"{rule['name']}({h['code']})"
-                    if _check_cooldown(state, key, rule.get("max_trigger_per_day", 1),
-                                       rule.get("cooldown_min", 0)):
-                        fired.append((rule, h["code"], p))
-                        _record_trigger(state, key, h["code"],
-                                        {"price": p["price"], "change_pct": p["change_pct"]})
-        else:
-            code = rule.get("code")
-            cond = rule.get("condition", {})
-            if not code or code not in prices:
+                port_value += p["price"] * h["qty"]
+                port_prev += p["prev_close"] * h["qty"]
+        portfolio_change = (port_value - port_prev) / port_prev * 100 if port_prev else 0
+
+        fired = []
+        for rule in rules:
+            if not rule.get("active", True):
                 continue
-            p = prices[code]
-            field = cond.get("field", "price")
-            if field == "portfolio_change_pct":
-                val = portfolio_change
-                if _eval_condition(cond, 0, val):
+            if not _check_extra(rule):
+                continue
+
+            if rule.get("applies_to") == "all_holdings":
+                for h in holdings:
+                    if h["code"] not in prices:
+                        continue
+                    p = prices[h["code"]]
+                    if _eval_condition(rule["condition"], p["price"], p["change_pct"]):
+                        key = f"{rule['name']}({h['code']})"
+                        if _check_cooldown(state, key, rule.get("max_trigger_per_day", 1),
+                                           rule.get("cooldown_min", 0)):
+                            fired.append((rule, h["code"], p))
+                            _record_trigger(state, key, h["code"],
+                                            {"price": p["price"], "change_pct": p["change_pct"]})
+            else:
+                code = rule.get("code")
+                cond = rule.get("condition", {})
+                if not code or code not in prices:
+                    continue
+                p = prices[code]
+                field = cond.get("field", "price")
+                if field == "portfolio_change_pct":
+                    val = portfolio_change
+                    if _eval_condition(cond, 0, val):
+                        if _check_cooldown(state, rule["name"],
+                                           rule.get("max_trigger_per_day", 1),
+                                           rule.get("cooldown_min", 0)):
+                            fired.append((rule, "PORTFOLIO", {"portfolio_change_pct": val}))
+                            _record_trigger(state, rule["name"], "PORTFOLIO",
+                                            {"portfolio_change_pct": val})
+                    continue
+                if _eval_condition(cond, p["price"], p["change_pct"]):
                     if _check_cooldown(state, rule["name"],
                                        rule.get("max_trigger_per_day", 1),
                                        rule.get("cooldown_min", 0)):
-                        fired.append((rule, "PORTFOLIO", {"portfolio_change_pct": val}))
-                        _record_trigger(state, rule["name"], "PORTFOLIO",
-                                        {"portfolio_change_pct": val})
-                continue
-            if _eval_condition(cond, p["price"], p["change_pct"]):
-                if _check_cooldown(state, rule["name"],
-                                   rule.get("max_trigger_per_day", 1),
-                                   rule.get("cooldown_min", 0)):
-                    fired.append((rule, code, p))
-                    _record_trigger(state, rule["name"], code,
-                                    {"price": p["price"], "change_pct": p["change_pct"]})
+                        fired.append((rule, code, p))
+                        _record_trigger(state, rule["name"], code,
+                                        {"price": p["price"], "change_pct": p["change_pct"]})
 
-    for rule, code, p in fired:
-        action_emoji = {"add": "🟢", "reduce": "🟡", "close": "🔴", "info": "🔔"}.get(rule.get("action"), "🔔")
-        title = f"{action_emoji} {rule['action'].upper()}: {p.get('name', code) or code}"
-        if rule.get("note"):
-            title = f"{action_emoji} {p.get('name', code) or code} - {rule['note'][:25]}"
-        body_parts = []
-        if "price" in p:
-            body_parts.append(f"价格 {p['price']:.3f}")
-        if "change_pct" in p:
-            body_parts.append(f"涨跌 {p['change_pct']:+.2f}%")
-        if "portfolio_change_pct" in p:
-            body_parts.append(f"组合 {p['portfolio_change_pct']:+.2f}%")
-        if rule.get("shares"):
-            body_parts.append(f"建议{rule['action']} {rule['shares']}股")
-        body = " | ".join(body_parts)
+        for rule, code, p in fired:
+            action_emoji = {"add": "🟢", "reduce": "🟡", "close": "🔴", "info": "🔔"}.get(rule.get("action"), "🔔")
+            title = f"{action_emoji} {rule['action'].upper()}: {p.get('name', code) or code}"
+            if rule.get("note"):
+                title = f"{action_emoji} {p.get('name', code) or code} - {rule['note'][:25]}"
+            body_parts = []
+            if "price" in p:
+                body_parts.append(f"价格 {p['price']:.3f}")
+            if "change_pct" in p:
+                body_parts.append(f"涨跌 {p['change_pct']:+.2f}%")
+            if "portfolio_change_pct" in p:
+                body_parts.append(f"组合 {p['portfolio_change_pct']:+.2f}%")
+            if rule.get("shares"):
+                body_parts.append(f"建议{rule['action']} {rule['shares']}股")
+            body = " | ".join(body_parts)
 
-        is_urgent = "紧急" in rule.get("name", "") or rule.get("action") == "info"
-        if not dry_run:
-            push(title, body, sound=is_urgent)
-            with sqlite3.connect(str(cfg.DECISIONS_DB)) as c:
-                c.execute("""
-                    INSERT INTO monitor_log (ts, rule, code, payload, body)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (datetime.now().isoformat(), rule["name"], code,
-                      json.dumps(p, ensure_ascii=False, default=str), body))
-        print(f"🔔 {title} | {body}")
+            is_urgent = "紧急" in rule.get("name", "") or rule.get("action") == "info"
+            if not dry_run:
+                push(title, body, sound=is_urgent)
+                with sqlite3.connect(str(cfg.DECISIONS_DB)) as c:
+                    c.execute("""
+                        INSERT INTO monitor_log (ts, rule, code, payload, body)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (datetime.now().isoformat(), rule["name"], code,
+                          json.dumps(p, ensure_ascii=False, default=str), body))
+            print(f"🔔 {title} | {body}")
 
-    # === 异动检测 (Phase 2) ===
-    # 火箭发射/高台跳水, 抄 kimi 算法修午休bug
-    anomaly_fired = _check_anomalies(holdings, state, dry_run)
+        # === 异动检测 ===
+        anomaly_fired = _check_anomalies(holdings, state, dry_run)
 
-    state["last_run"] = datetime.now().isoformat()
-    _save_state(state)
+        state["last_run"] = datetime.now().isoformat()
+        _save_state(state)
 
-    return {"fired": len(fired), "rules_checked": len(rules),
-            "holdings": len(holdings),
-            "anomaly_fired": anomaly_fired,
-            "portfolio_change": round(portfolio_change, 2)}
+        return {"fired": len(fired), "rules_checked": len(rules),
+                "holdings": len(holdings),
+                "anomaly_fired": anomaly_fired,
+                "portfolio_change": round(portfolio_change, 2)}
+    except Exception as e:
+        _log_error("monitor", "_run_impl", e)
+        return {"fired": 0, "rules_checked": 0, "error": str(e)}
 
 
 def _check_anomalies(holdings: list[dict], state: dict, dry_run: bool) -> int:
     """异动检测: 火箭发射/高台跳水. 每标的一天最多推2次."""
-    from a_stock.anomaly import check as anomaly_check, _is_trading_time
-    if not _is_trading_time():
+    try:
+        from a_stock.anomaly import check as anomaly_check, _is_trading_time
+        if not _is_trading_time():
+            return 0
+
+        fired = 0
+        # 持仓 + watchlist
+        from a_stock.anomaly_holdings_loader import load_targets
+        targets = load_targets()
+
+        for t in targets:
+            code = t["code"]
+            key = f"anomaly({code})"
+            # 一天最多2次异动推送
+            if not _check_cooldown(state, key, max_per_day=2, cooldown_min=15):
+                continue
+            try:
+                sig = anomaly_check(code, t.get("name", ""))
+            except Exception as e:
+                print(f"⚠ 异动检测 {code} 失败: {e}")
+                continue
+            if not sig:
+                continue
+
+            title = f"{sig['type']}: {sig['name']}"
+            body = (f"价格 {sig['price']:.3f} | 3分钟涨速 {sig['speed_3min']:+.2f}% | "
+                    f"量比 {sig['vol_ratio']:.1f} | {sig['trend']}")
+            is_urgent = "跳水" in sig["type"]
+            if not dry_run:
+                push(title, body, sound=is_urgent)
+                with sqlite3.connect(str(cfg.DECISIONS_DB)) as c:
+                    c.execute("""
+                        INSERT INTO monitor_log (ts, rule, code, payload, body)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (datetime.now().isoformat(), sig["type"], code,
+                          json.dumps(sig, ensure_ascii=False, default=str), body))
+            _record_trigger(state, key, code,
+                            {"speed": sig["speed_3min"], "vol_ratio": sig["vol_ratio"]})
+            print(f"🚨 {title} | {body}")
+            fired += 1
+        return fired
+    except Exception as e:
+        _log_error("monitor", "_check_anomalies", e)
         return 0
-
-    fired = 0
-    # 持仓 + watchlist
-    from a_stock.anomaly_holdings_loader import load_targets
-    targets = load_targets()
-
-    for t in targets:
-        code = t["code"]
-        key = f"anomaly({code})"
-        # 一天最多2次异动推送
-        if not _check_cooldown(state, key, max_per_day=2, cooldown_min=15):
-            continue
-        try:
-            sig = anomaly_check(code, t.get("name", ""))
-        except Exception as e:
-            print(f"⚠ 异动检测 {code} 失败: {e}")
-            continue
-        if not sig:
-            continue
-
-        title = f"{sig['type']}: {sig['name']}"
-        body = (f"价格 {sig['price']:.3f} | 3分钟涨速 {sig['speed_3min']:+.2f}% | "
-                f"量比 {sig['vol_ratio']:.1f} | {sig['trend']}")
-        is_urgent = "跳水" in sig["type"]
-        if not dry_run:
-            push(title, body, sound=is_urgent)
-            with sqlite3.connect(str(cfg.DECISIONS_DB)) as c:
-                c.execute("""
-                    INSERT INTO monitor_log (ts, rule, code, payload, body)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (datetime.now().isoformat(), sig["type"], code,
-                      json.dumps(sig, ensure_ascii=False, default=str), body))
-        _record_trigger(state, key, code,
-                        {"speed": sig["speed_3min"], "vol_ratio": sig["vol_ratio"]})
-        print(f"🚨 {title} | {body}")
-        fired += 1
-    return fired
 
 
 def main():

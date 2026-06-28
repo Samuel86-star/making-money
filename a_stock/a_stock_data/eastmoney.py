@@ -1,7 +1,13 @@
-"""东财数据层:研报列表/板块归属/资金流/龙虎榜。"""
+"""东财数据层:研报列表/板块归属/资金流/龙虎榜/日K线。"""
 import json
 import time
+from datetime import date, datetime
+from pathlib import Path
+
+import pandas as pd
+
 from a_stock.a_stock_data._common import em_get, em_cache_get, em_cache_put, _cache_key, get_prefix
+import a_stock.config as cfg
 
 # ── 2.1 个股研报列表 ─────────────────────────────────
 REPORTAPI_URL = "https://reportapi.eastmoney.com/report/list"
@@ -267,3 +273,114 @@ def broken_board_pool(trade_date: str | None = None) -> dict:
     except Exception:
         return {"total": 0, "data": []}
     return {"total": len(pool), "data": pool}
+
+
+# ── 3.9 东财日K线 (push2his) ──────────────────────
+KLINE_HIS_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
+
+def stock_kline_daily(code: str, limit: int = 120) -> list[dict]:
+    """拉个股日K线 (东财push2his, 前复权).
+    用 em_get 限流, 带 beg/end 参数保证周末也能拉.
+
+    Args:
+        code: 6位代码
+        limit: 返回条数
+
+    Returns: [{"date":"YYYY-MM-DD","open":x,"high":x,"low":x,"close":x,"volume":x}]
+    """
+    from datetime import date, timedelta
+
+    secid_map = {"sh": "1.", "sz": "0.", "bj": "0."}
+    secid = secid_map[get_prefix(code)] + code
+    end = date.today()
+    beg = end - timedelta(days=limit)
+
+    params = {
+        "secid": secid,
+        "fields1": "f1,f2,f3",
+        "fields2": "f51,f52,f53,f54,f55,f56,f57",
+        "klt": "101",        # 日K
+        "fqt": "1",          # 前复权
+        "beg": beg.strftime("%Y%m%d"),
+        "end": end.strftime("%Y%m%d"),
+    }
+    try:
+        r = em_get(KLINE_HIS_URL, params=params, timeout=15)
+        d = r.json().get("data", {})
+        klines = d.get("klines", [])
+        if not klines:
+            return []
+        out = []
+        for k in klines:
+            parts = k.split(",")
+            if len(parts) < 7:
+                continue
+            out.append({
+                "date":   parts[0],
+                "open":   float(parts[1] or 0),
+                "close":  float(parts[2] or 0),
+                "high":   float(parts[3] or 0),
+                "low":    float(parts[4] or 0),
+                "volume": int(float(parts[5] or 0)),
+            })
+        return out
+    except Exception as e:
+        print(f"⚠ stock_kline_daily({code}) 失败: {e}")
+        return []
+
+
+def refresh_ohlcv_parquet(codes: list[str] | None = None, days: int = 10) -> dict:
+    """更新一批股票OHLCV parquet缓存.
+
+    读现存 parquet → 合并新K线 → 去重 → 写回.
+    仅更新最近 days 天, 避免全量拉取.
+
+    Args:
+        codes: 股票列表 (None=读已缓存的)
+        days: 拉取近N天日K
+
+    Returns: {"updated": n, "errors": [code,...]}
+    """
+    from a_stock.ohlcv import load_ohlcv
+
+    if codes is None:
+        codes = sorted(p.stem for p in cfg.OHLCV_DIR.glob("*.parquet"))
+
+    updated = 0
+    errors = []
+
+    for code in codes:
+        try:
+            fetched = stock_kline_daily(code, limit=days)
+            if not fetched:
+                continue
+
+            new_df = pd.DataFrame(fetched)
+            new_df["date"] = pd.to_datetime(new_df["date"])
+            new_df = new_df.set_index("date")
+            new_df.index.name = "Date"
+            new_df = new_df.rename(columns={
+                "open": "Open", "high": "High",
+                "low": "Low", "close": "Close", "volume": "Volume",
+            })
+            new_df = new_df.sort_index()
+
+            # 合并到现有 parquet
+            path = cfg.OHLCV_DIR / f"{code}.parquet"
+            if path.exists():
+                old = pd.read_parquet(path)
+                merged = pd.concat([old, new_df])
+                # 去重 (同日期保留新数据)
+                merged = merged[~merged.index.duplicated(keep="last")]
+                merged = merged.sort_index()
+            else:
+                merged = new_df
+
+            merged.to_parquet(path)
+            updated += 1
+
+        except Exception as e:
+            errors.append(code)
+            print(f"  ⚠ {code} 更新失败: {e}")
+
+    return {"updated": updated, "errors": errors, "total": len(codes)}

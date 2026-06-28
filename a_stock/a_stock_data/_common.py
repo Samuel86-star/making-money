@@ -55,7 +55,7 @@ def em_cache_put(key: str, data) -> None:
 def get_prefix(code: str) -> str:
     """6 位代码 → 市场前缀。"""
     code = normalize_code(code)
-    if code.startswith(("6", "9")):
+    if code.startswith(("5", "6", "9")):
         return "sh"
     elif code.startswith("8"):
         return "bj"

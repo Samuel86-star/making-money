@@ -1,0 +1,502 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A股决策系统架构 v1.0</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:#0d1117;color:#e6edf3;line-height:1.6;min-height:100vh;
+}
+
+/* ===== Layout ===== */
+.wrap{max-width:1280px;margin:0 auto;padding:0 24px 60px}
+.section-title{margin:48px 0 6px;font-size:15px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#58a6ff;display:flex;align-items:center;gap:8px}
+.section-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#30363d,transparent)}
+
+/* ===== Hero ===== */
+.hero{text-align:center;padding:48px 0 40px;position:relative}
+.hero h1{font-size:32px;font-weight:700;background:linear-gradient(135deg,#58a6ff,#3fb950);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero .sub{margin-top:8px;color:#8b949e;font-size:14px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+.hero .sub .sep{color:#30363d}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;gap:4px}
+.badge-green{background:rgba(63,185,80,.15);color:#3fb950;border:1px solid rgba(63,185,80,.3)}
+.badge-red{background:rgba(248,81,73,.15);color:#f85149;border:1px solid rgba(248,81,73,.3)}
+.badge-blue{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}
+.badge-orange{background:rgba(210,153,34,.15);color:#d29922;border:1px solid rgba(210,153,34,.3)}
+.badge-gray{background:rgba(139,148,158,.15);color:#8b949e;border:1px solid rgba(139,148,158,.3)}
+
+/* ===== Stats Bar ===== */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:28px 0 24px}
+.stat-card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px 20px;text-align:center;transition:border-color .2s}
+.stat-card:hover{border-color:#58a6ff}
+.stat-card .num{font-size:26px;font-weight:700;line-height:1.2}
+.stat-card .lbl{font-size:12px;color:#8b949e;margin-top:4px}
+.stat-card .num.green{color:#3fb950}
+.stat-card .num.red{color:#f85149}
+.stat-card .num.blue{color:#58a6ff}
+
+/* ===== Nav Tabs ===== */
+.nav{display:flex;flex-wrap:wrap;gap:6px;margin:24px 0 36px;padding:12px 16px;background:#161b22;border:1px solid #30363d;border-radius:10px}
+.nav a{color:#8b949e;text-decoration:none;font-size:13px;padding:4px 12px;border-radius:6px;transition:all .15s}
+.nav a:hover{color:#e6edf3;background:#21262d}
+.nav a:active{color:#58a6ff}
+
+/* ===== Mermaid Diagram Card ===== */
+.diagram{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin:12px 0 28px;overflow-x:auto;transition:border-color .2s}
+.diagram:hover{border-color:#58a6ff}
+.diagram .mermaid{display:flex;justify-content:center}
+.diagram .mermaid svg{max-width:100%}
+
+/* Force mermaid dark theme overrides */
+.diagram :is(.cluster,.cluster-label,.label text,.nodeLabel,.edgeLabel,.edgeTerminals),.diagram .edgeLabel span{color:#e6edf3!important}
+.diagram .cluster rect{fill:#0d1117!important;stroke:#30363d!important;stroke-width:2!important}
+.diagram :is(.node rect,.node circle,.node polygon){stroke:#30363d!important;fill:#161b22!important}
+
+/* ===== Table ===== */
+.table-wrap{overflow-x:auto;margin:12px 0 28px;background:#161b22;border:1px solid #30363d;border-radius:12px;transition:border-color .2s}
+.table-wrap:hover{border-color:#58a6ff}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:#1c2128;color:#8b949e;font-weight:600;text-align:left;padding:12px 16px;border-bottom:1px solid #30363d;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:12px 16px;border-bottom:1px solid #21262d;color:#c9d1d9}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#1c2128}
+td code{background:#21262d;padding:2px 6px;border-radius:4px;font-size:13px;color:#f0c674}
+
+/* ===== Tag badges for tables ===== */
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.tag-green{background:rgba(63,185,80,.15);color:#3fb950}
+.tag-orange{background:rgba(210,153,34,.15);color:#d29922}
+.tag-blue{background:rgba(88,166,255,.15);color:#58a6ff}
+.tag-gray{background:rgba(139,148,158,.15);color:#8b949e}
+
+/* ===== Description ===== */
+.desc{margin:-4px 0 16px;font-size:13px;color:#8b949e;line-height:1.5}
+
+/* ===== Responsive ===== */
+@media(max-width:640px){
+  .wrap{padding:0 12px 40px}
+  .hero h1{font-size:22px}
+  .stats{grid-template-columns:1fr 1fr}
+  .nav{gap:4px;padding:10px}
+  .nav a{font-size:12px;padding:3px 8px}
+  .diagram{padding:12px;margin:8px 0 20px}
+  th,td{padding:8px 10px;font-size:13px}
+}
+
+/* ===== Print ===== */
+@media print{body{background:#fff;color:#000}.diagram,.table-wrap,.stat-card,.nav{background:#f5f5f5;border-color:#ddd;box-shadow:none}.hero h1{-webkit-text-fill-color:#000;background:none;color:#000}th{background:#eee}.stat-card .num{color:#000!important}td code{background:#eee;color:#333}}
+</style>
+</head><body>
+
+<div class="wrap">
+
+<!-- ===== Hero ===== -->
+<div class="hero">
+  <h1>A股决策系统架构 v1.0</h1>
+  <p class="sub">
+    <span>2026-06-27</span>
+    <span class="sep">·</span>
+    <span>发现→确认→执行→复盘</span>
+    <span class="sep">·</span>
+    <span class="badge badge-green">🎯 78,788 → 100,000</span>
+    <span class="badge badge-red">P(达成) 0.2%</span>
+  </p>
+</div>
+
+<!-- ===== Stats ===== -->
+<div class="stats">
+  <div class="stat-card"><div class="num green">78,788</div><div class="lbl">当前总资产</div></div>
+  <div class="stat-card"><div class="num blue">+26.9%</div><div class="lbl">目标涨幅 (187天)</div></div>
+  <div class="stat-card"><div class="num green">5</div><div class="lbl">持仓标的</div></div>
+  <div class="stat-card"><div class="num blue">11</div><div class="lbl">监控规则</div></div>
+  <div class="stat-card"><div class="num green">0</div><div class="lbl">架构缺口</div></div>
+</div>
+
+<!-- ===== Nav ===== -->
+<nav class="nav">
+  <a href="#arch">分层架构</a>
+  <a href="#strategies">策略层</a>
+  <a href="#flow">核心数据流</a>
+  <a href="#deps">依赖关系</a>
+  <a href="#weights">评分权重</a>
+  <a href="#rules">监控规则</a>
+  <a href="#anomaly">异动检测</a>
+  <a href="#storage">存储结构</a>
+  <a href="#gaps">缺口</a>
+  <a href="#stack">技术栈</a>
+</nav>
+
+<script>mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{
+  primaryColor:'#1f6feb',primaryTextColor:'#e6edf3',primaryBorderColor:'#30363d',
+  lineColor:'#58a6ff',secondaryColor:'#161b22',tertiaryColor:'#0d1117',
+  clusterBkg:'#0d1117',clusterBorder:'#30363d',
+  nodeBorder:'#30363d',mainBkg:'#161b22',
+  edgeLabelBackground:'#161b22',
+  titleColor:'#e6edf3',
+},flowchart:{useMaxWidth:true,htmlLabels:true},sequence:{
+  actorBackground:'#1c2128',actorBorder:'#30363d',
+  actorTextColor:'#e6edf3',signalTextColor:'#8b949e',
+  labelBoxBackground:'#1c2128',labelBoxBorderColor:'#30363d',
+},pie:{
+  textColor:'#e6edf3',strokeColor:'#30363d',strokeWidth:1,
+}});</script>
+
+<!-- ===== 1. 分层架构 ===== -->
+<h2 id="arch" class="section-title">分层架构</h2>
+<p class="desc">系统分8层: 数据源 → 发现 → 评分 → 确认 → 调度 → 执行 → 复盘 + 辅助。存储层贯穿</p>
+<div class="diagram"><div class="mermaid">
+graph TB
+    subgraph 数据源["🌐 数据源层 a_stock_data/"]
+        EM[东财 eastmoney<br/>资金流/板块/龙虎榜/研报]
+        TX[腾讯 tencent<br/>实时报价 qt.gtimg.cn]
+        THS[同花顺 ths<br/>热度/EPS/北向]
+        FN[新浪 financials<br/>三表/公告 filings]
+        SC[板块排行 sectors]
+        OH[ohlcv<br/>K线/技术指标]
+    end
+
+    subgraph 发现["🔍 发现层 (策略+早盘+异动)"]
+        STR[strategies/<br/>5策略 Signal Bridge<br/>→ 信号聚合 → topM]
+        MS[morning_scan<br/>9:35/9:50 策略候选+5维评分<br/>→ 信号桥接 → top5推送]
+        AN[anomaly<br/>火箭发射/高台跳水<br/>3min涨速+量比]
+        SR[sector_rotation<br/>板块轮动持续性<br/>4指标 + 资金流加强]
+    end
+
+    subgraph 评分["📊 评分层 scorers/"]
+        TOT[total_scorer<br/>综合评分 + 否决]
+        TC[technical<br/>技术面 35%]
+        MF[moneyflow<br/>资金面 35%]
+        FD[fundamental<br/>基本面 10%]
+        SS[sector<br/>板块 10%]
+        EV[event<br/>事件 10%]
+    end
+
+    subgraph 确认["✅ 确认层"]
+        DR[deep_research<br/>DCF+Comps+DD清单]
+        SRV[self_review<br/>门禁 critical>0→阻断]
+        BRF[生产者简报 brief]
+    end
+
+    subgraph 调度["⏰ 调度层"]
+        SCH[scheduler<br/>多时间点+6段时段+节假日]
+        CR[cron<br/>交易时段每5min触发]
+    end
+
+    subgraph 执行["⚡ 执行层"]
+        MON[monitor<br/>11条规则+异动+非阻塞锁]
+        RUL[rules.yaml<br/>规则配置]
+        NOT[notifier<br/>osascript + RateLimiter三闸门]
+        PS[position_sizer<br/>凯利公式]
+        DL[a_screen/decision_log<br/>决策DB读写]
+    end
+
+    subgraph 复盘["📊 复盘层"]
+        CS[close_scan<br/>15:10盘后落盘]
+        SEN[sentiment<br/>北向+龙虎榜+研报热度 0-100]
+        GS[goal_sim<br/>蒙特卡洛 P(达成)]
+        RM[risk_metrics<br/>Sharpe/MaxDD/波动率]
+        STA[stats<br/>胜率/纪律分析]
+    end
+
+    subgraph 辅助["🛠 辅助"]
+        MC[macro_calendar<br/>宏观事件]
+        TD[todo<br/>待办系统]
+        LOG[log.py<br/>CLI写入DB]
+    end
+
+    subgraph 存储["💾 存储 data/"]
+        DB1[(decisions.sqlite)]
+        DB2[(screener.sqlite +daily_close)]
+        DB3[(scheduler.sqlite WAL)]
+        DB4[(anomaly_ticks.sqlite)]
+        DB5[(sector_rotation.sqlite)]
+        ST1[monitor_state.json]
+        ST2[sentiment_state.json]
+        ST3[self_review_issues.json]
+    end
+
+    EM --> MS; TX --> AN; SC --> SR; EM --> SR
+    STR -.->|topM 候选| MS
+    STR --> OH; STR --> EM
+    MS -.-> SR
+    MS --> TOT; TOT --> TC; TOT --> MF; TOT --> FD; TOT --> SS; TOT --> EV
+    MS -.-> DR; DR --> SRV; SRV -->|critical=0| BRF
+    BRF --> PS; PS --> DL; DL --> DB1
+    CR --> SCH; SCH --> MS; SCH --> AN; SCH --> CS; SCH --> MON
+    MON --> RUL; MON --> AN; MON --> TX; MON --> NOT; MON --> ST1; MON --> DB1
+    CS --> DB2; DL --> CS; DL --> SEN; DB2 --> SEN; DL --> GS; DL --> RM; DL --> STA
+    LOG --> DL; MC -.-> MON; TD -.-> LOG
+    NOT -.推送.-> USER[👨 用户 看弹窗→券商app下单]
+    MS -.推送.-> USER
+
+    style MS fill:#0d4194,stroke:#58a6ff,color:#e6edf3
+    style AN fill:#0d4194,stroke:#58a6ff,color:#e6edf3
+    style SR fill:#0d4194,stroke:#58a6ff,color:#e6edf3
+    style DR fill:#3d2800,stroke:#d29922,color:#e6edf3
+    style SRV fill:#3d2800,stroke:#d29922,color:#e6edf3
+    style MON fill:#3d2e00,stroke:#d29922,color:#e6edf3
+    style NOT fill:#3d2e00,stroke:#d29922,color:#e6edf3
+    style USER fill:#00381f,stroke:#3fb950,color:#e6edf3
+    style STR fill:#1c2128,stroke:#484f58,color:#8b949e
+</div></div>
+
+<!-- ===== 2. 核心数据流 ===== -->
+<h2 id="strategies" class="section-title">策略层内部架构 (Signal Bridge)</h2>
+<p class="desc">5个策略并行产生 Signal → SignalVote 聚合 → topM 送到 morning_scan 做5维评分</p>
+<div class="diagram"><div class="mermaid">
+graph TB
+    subgraph 策略容器["strategies/"]
+        BASE[base.py<br/>StrategyMeta + BaseStrategy<br/>META/filter/signals 三段式]
+        REG[registry.py<br/>importlib 目录反射 自动注册]
+        SGN[signals.py<br/>Signal{code,action,<br/>confidence,strategy,reason}]
+        RUN[runner.py<br/>build_indicators<br/>→ run_all → SignalVote]
+        NL[near_limit_up 逼近涨停<br/>涨>7%+距涨停<3%]
+        TB[trend_breakout 趋势突破<br/>close>ma60+新高+量比≥2]
+        OB[oversold_bounce 超跌反弹<br/>RSI<30+收阳+量比≥1.2]
+        MF[moneyflow_surge 资金流异动<br/>东财净流入排名]
+        SM[sector_momentum 板块动量<br/>轮动领头羊]
+    end
+    subgraph 数据输入["数据源"]
+        OH2[ohlcv/ K线 + 技术指标]
+        EM2[东财 资金流/板块]
+        TX2[腾讯 实时价]
+    end
+    subgraph 输出["输出"]
+        WL[watchlist SignalVote topM]
+    end
+    OH2 --> RUN; EM2 --> RUN; TX2 --> RUN
+    REG --> RUN; BASE --> NL; BASE --> TB; BASE --> OB; BASE --> MF; BASE --> SM
+    RUN --> SGN; SGN -->|SignalVote| WL
+    NL -.-> RUN; TB -.-> RUN; OB -.-> RUN; MF -.-> RUN; SM -.-> RUN
+    style NL fill:#0d4194,stroke:#58a6ff
+    style TB fill:#0d4194,stroke:#58a6ff
+    style OB fill:#0d4194,stroke:#58a6ff
+    style MF fill:#0d4194,stroke:#58a6ff
+    style SM fill:#0d4194,stroke:#58a6ff
+</div></div>
+
+<h2 id="flow" class="section-title">核心数据流</h2>
+<p class="desc">策略发现→评分确认→执行监控→盘后复盘。用户始终决策者</p>
+<div class="diagram"><div class="mermaid">
+sequenceDiagram
+    participant C as cron
+    participant SCH as scheduler
+    participant MS as morning_scan
+    participant RUN as strategies/runner
+    participant VOTE as SignalVote
+    participant SCORE as 5维评分
+    participant SR as sector_rotation
+    participant W as watchlist
+    participant DR as deep_research
+    participant SRV as self_review
+    participant U as 👨用户
+    participant R as rules.yaml
+    participant M as monitor
+    participant N as notifier
+    participant CL as close_scan
+    participant SEN as sentiment
+
+    C->>SCH: 每1min检查到点任务
+    SCH->>MS: 09:35 早盘扫描
+    MS->>RUN: 全市场topN → 策略信号
+    RUN->>RUN: 5策略并行 filter+signals
+    RUN->>VOTE: 聚合 Signal
+    VOTE-->>MS: topM 候选 (按 confidence)
+    MS->>SCORE: topM → 5维评分
+    SCORE-->>MS: 总分 + 否决
+    MS->>SR: 板块轮动
+    SR-->>MS: 领涨板块/主线
+    MS->>W: top5 写 watchlist
+    MS->>N: 推送候选
+    N->>U: Mac弹窗 "早盘候选top5"
+
+    U->>DR: 开会话喊深研
+    DR->>DR: DCF+Comps+DD
+    DR->>SRV: self-review门禁
+    alt critical>0
+        SRV--xDR: ⛔ 阻断
+    else critical=0
+        SRV->>U: 报告+仓位建议
+        U->>R: 同意→设买点进rules
+    end
+
+    C->>SCH: 每5min触发交易时段
+    SCH->>M: 监控循环
+    M->>M: 拉实时价+比对11条规则
+    M->>M: 异动检测 (火箭/跳水)
+    alt 命中规则 or 异动
+        M->>N: 推送(title, body)
+        N->>U: Mac弹窗 → 用户下单
+    end
+
+    C->>SCH: 15:10
+    SCH->>CL: 盘后落盘
+    CL->>CL: 板块snapshot+情绪+持仓评分
+    CL->>SEN: 北向/龙虎榜/研报热度
+    CL->>N: 推送 "盘后摘要"
+    N->>U: Mac弹窗
+</div></div>
+
+<!-- ===== 3. 依赖关系 ===== -->
+<h2 id="deps" class="section-title">依赖关系</h2>
+<p class="desc">外部5数据源 + 内部5共享模块。所有模块通过 config.py 共享配置</p>
+<div class="diagram"><div class="mermaid">
+graph LR
+    subgraph 外部["外部数据源"]
+        AP[qt.gtimg.cn 实时价]
+        EP[东财push2 资金流/板块]
+        TP[腾讯行情]
+        SP[新浪财报]
+        HP[同花顺热度]
+    end
+
+    subgraph 内部["内部共享模块"]
+        CFG[config.py 路径/权重/限流]
+        DB[db.py schema+helpers]
+        OH[ohlcv.py K线加载]
+        CM[_common.py 限流/缓存/重试]
+    end
+
+    AP --> monitor; AP --> anomaly; AP --> strategies
+    EP --> morning_scan; EP --> sector_rotation; EP --> sentiment; EP --> strategies
+    TP --> monitor; TP --> eastmoney
+    SP --> financials; HP --> ths
+
+    CFG --> ALL[所有模块]
+    DB --> log; DB --> close_scan; DB --> goal_sim; DB --> risk_metrics
+    OH --> deep_research; OH --> strategies
+    CM --> eastmoney; CM --> tencent
+</div></div>
+
+<!-- ===== 4. 评分权重 ===== -->
+<h2 id="weights" class="section-title">评分权重</h2>
+<p class="desc">多因子模型: 技术+资金占 70%, 基本面/板块/事件各 10%</p>
+<div class="diagram"><div class="mermaid">
+pie title 多因子评分权重 (总分100)
+    "技术面 technical 35%" : 35
+    "资金面 moneyflow 35%" : 35
+    "基本面 fundamental 10%" : 10
+    "板块 sector 10%" : 10
+    "事件 event 10%" : 10
+</div></div>
+
+<!-- ===== 5. 监控规则分类 ===== -->
+<h2 id="rules" class="section-title">监控规则分类</h2>
+<p class="desc">11条规则分3类: 加仓(5)/风控(2)/止盈(2) + monitor内嵌异动检测</p>
+<div class="diagram"><div class="mermaid">
+graph LR
+    subgraph 加仓["加仓 (add) 5条"]
+        A1[消费ETF 阶梯1 ≤0.95]
+        A2[消费ETF 阶梯2 ≤0.93]
+        A3[恒瑞 回踩47-48]
+        A4[通信ETF ≤1.70]
+        A5[通信ETF 加码 ≤1.60]
+    end
+    subgraph 风控["风控 (info) 2条"]
+        R1[单标的日内-7%]
+        R2[组合日内-3%]
+    end
+    subgraph 止盈["止盈 (reduce/info) 2条"]
+        P1[创业板ETF ≤4.00]
+        P2[恒瑞 ≥55.0]
+    end
+
+    A1 --> MON[monitor 每5min]
+    A2 --- MON; A3 --- MON; A4 --- MON; A5 --- MON
+    R1 --- MON; R2 --- MON
+    P1 --- MON; P2 --- MON
+    MON -->|命中| NOT[notifier 三闸门]
+    NOT -->|弹窗| USER[👨 用户下单]
+</div></div>
+
+<!-- ===== 6. 异动检测 ===== -->
+<h2 id="anomaly" class="section-title">异动检测</h2>
+<p class="desc">火箭发射/高台跳水 — 基于3分钟涨速+量比, tick缓存保留3天</p>
+<div class="diagram"><div class="mermaid">
+sequenceDiagram
+    participant M as monitor
+    participant A as anomaly
+    participant GT as qt.gtimg.cn
+    participant TK as anomaly_ticks.sqlite
+    participant N as notifier
+    participant U as 👨用户
+
+    M->>A: 每5min调用 (持仓+候选)
+    A->>GT: 拉实时价+量比
+    GT-->>A: 价/量/涨速
+    A->>TK: 写 tick 缓存 (保留3天)
+    A->>A: 算3min涨速 + 量比
+    alt 涨速>1% 且 量比>1.5
+        A->>N: 🚀 火箭发射
+    else 涨速<-1%
+        A->>N: 🌊 高台跳水
+    end
+    N->>U: Mac弹窗
+</div></div>
+
+<!-- ===== 7. 存储结构 ===== -->
+<h2 id="storage" class="section-title">存储结构</h2>
+<p class="desc">5个 SQLite + 4个 JSON + 4个目录。单用户无需PG, SQLite+WAL够用</p>
+<div class="diagram"><div class="mermaid">
+graph TB
+    subgraph SQLite["SQLite 数据库 (5)"]
+        D1[decisions.sqlite<br/>决策日志/持仓/资金曲线]
+        D2[screener.sqlite<br/>全市场扫描/daily_close]
+        D3[scheduler.sqlite WAL<br/>调度持久化]
+        D4[anomaly_ticks.sqlite<br/>tick 缓存 3天]
+        D5[sector_rotation.sqlite<br/>板块轮动历史]
+    end
+    subgraph JSON["JSON 状态 (4)"]
+        J1[monitor_state.json 规则触发历史]
+        J2[sentiment_state.json 情绪序列]
+        J3[self_review_issues.json 门禁记录]
+        J4[todo.json 待办]
+    end
+    subgraph 其他["其他目录"]
+        O1[ohlcv/ K线目录]
+        O2[screen/daily/ 日扫描]
+        O3[a_share_list.json 全市场列表]
+    end
+</div></div>
+
+<!-- ===== 8. 缺口 ===== -->
+<h2 id="gaps" class="section-title">缺口 & 待改进</h2>
+<p class="desc"><span class="badge badge-green">✓</span> 架构图上所有模块已实现, 除 <code>strategies/</code> 为空</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>#</th><th>缺口</th><th>影响</th><th>优先级</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>无 parquet 存 enriched 全市场</td><td>情绪/回测需重拉, 计算冗余</td><td><span class="tag tag-blue">低</span></td></tr>
+<tr><td>2</td><td>无多券商对接</td><td>仅弹窗, 不能自动下单 (设计如此)</td><td><span class="tag tag-gray">—</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ===== 9. 技术栈 ===== -->
+<h2 id="stack" class="section-title">技术栈</h2>
+<p class="desc">全栈 Python 3.12+, 零外部中间件, 纯本地运行</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>维度</th><th>选择</th><th>原因</th></tr></thead>
+<tbody>
+<tr><td>语言</td><td>Python 3.12+</td><td>数据源SDK/量化库生态</td></tr>
+<tr><td>存储</td><td>SQLite × 5 + JSON × 4</td><td>单用户, 无需 PG</td></tr>
+<tr><td>数据源</td><td>东财 push2 / 腾讯 / 同花顺 / 新浪</td><td>免费/稳定/批量</td></tr>
+<tr><td>通知</td><td>macOS osascript</td><td>本地单机, 无需钉钉/微信</td></tr>
+<tr><td>调度</td><td>cron + scheduler.py</td><td>简单可靠, 带 WAL 持久化</td></tr>
+<tr><td>限流</td><td>三闸门 RateLimiter</td><td>防封 (抄 a-share-quant)</td></tr>
+<tr><td>防重入</td><td>threading.Lock 非阻塞</td><td>LLM/评分超时防堆积</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ===== Footer ===== -->
+<div style="text-align:center;padding:40px 0 20px;font-size:12px;color:#484f58">
+  A股决策支持系统 · 代码即文档 · 2026
+</div>
+
+</div>
+</body></html>

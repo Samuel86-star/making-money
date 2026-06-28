@@ -18,6 +18,7 @@ DEFAULT_SCHEDULE = {
     "morning_scan_1": "09:35",   # 早盘速览
     "morning_scan_2": "09:50",   # 早盘确认
     "close_scan": "15:10",       # 盘后落盘
+    "refresh_ohlcv": "15:30",    # 日K线更新
 }
 
 
@@ -167,6 +168,10 @@ def run_due(dry_run: bool = False) -> dict:
                 from a_stock.close_scan import run as close_run
                 r = close_run(dry_run=dry_run)
                 results[key] = r
+            elif key == "refresh_ohlcv":
+                from a_stock.a_stock_data.eastmoney import refresh_ohlcv_parquet
+                r = refresh_ohlcv_parquet(days=60)
+                results[key] = {"updated": r["updated"], "errors": r["errors"]}
             if not dry_run:
                 mark_run(key)
         except Exception as e:
