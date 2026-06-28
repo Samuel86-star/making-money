@@ -258,3 +258,62 @@ def _make_limit_ohlcv(change_pct: float):
     lows = [min(o, c) - 0.05 for o, c in zip(opens, closes)]
     return pd.DataFrame({"date": dates, "open": opens, "high": highs,
                          "low": lows, "close": closes, "volume": [10000] * n})
+
+
+def test_moneyflow_surge_hit_top10(monkeypatch):
+    """资金流排名 #5 + 收涨 → 触发 0.6."""
+    from a_stock.strategies import runner
+    from a_stock.strategies.moneyflow_surge import MoneyflowSurge
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_rising_ohlcv())
+    mfs = MoneyflowSurge()
+    mfs._rank = {"T_001": 5}
+    sigs = mfs.signals("T_001", "A")
+    assert len(sigs) == 1
+    assert sigs[0].confidence == 0.6
+
+
+def test_moneyflow_surge_miss_rank_too_low(monkeypatch):
+    """排名 #15 (>10) → 不触发."""
+    from a_stock.strategies import runner
+    from a_stock.strategies.moneyflow_surge import MoneyflowSurge
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_rising_ohlcv())
+    mfs = MoneyflowSurge()
+    mfs._rank = {"T_001": 15}
+    assert mfs.signals("T_001", "A") == []
+
+
+def test_moneyflow_surge_miss_dropping(monkeypatch):
+    """排名 #3 但收跌 → 不触发."""
+    from a_stock.strategies import runner
+    from a_stock.strategies.moneyflow_surge import MoneyflowSurge
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_falling_ohlcv())
+    mfs = MoneyflowSurge()
+    mfs._rank = {"T_001": 3}
+    assert mfs.signals("T_001", "A") == []
+
+
+def _make_rising_ohlcv():
+    import pandas as pd
+    n = 70
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    closes = [10.0 + i * 0.01 for i in range(n - 1)] + [11.0]
+    opens = closes[:]
+    opens[-1] = 10.5  # 收涨
+    return pd.DataFrame({"date": dates, "open": opens, "high": [c+0.1 for c in closes],
+                         "low": [c-0.1 for c in closes], "close": closes,
+                         "volume": [10000]*n})
+
+
+def _make_falling_ohlcv():
+    import pandas as pd
+    n = 70
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    closes = [11.0 - i * 0.01 for i in range(n - 1)] + [10.0]
+    opens = closes[:]
+    opens[-1] = 10.5  # 收跌 (close 10 < open 10.5)
+    return pd.DataFrame({"date": dates, "open": opens, "high": [c+0.1 for c in closes],
+                         "low": [c-0.1 for c in closes], "close": closes,
+                         "volume": [10000]*n})
