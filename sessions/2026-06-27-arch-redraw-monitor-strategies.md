@@ -77,31 +77,28 @@ strategies/ → SignalVote → topM → morning_scan → scorers 5维评分 → 
 open docs/architecture/preview.html
 ```
 
-## 待执行 — strategies/ 实现
+## 已完成 — strategies/ 实现
 
-计划已就绪, 下一步选执行方式 (用户离开前未定):
+全部 14 Task 通过 subagent-driven dev 落地 (Batch A 骨架 + Batch B 5策略 + Batch C 集成), 每批 review 后提交.
 
-**选项 1: Subagent-Driven (推荐)** — 每 Task 派新 subagent, Task 间 review
-**选项 2: Inline Execution** — 本会话内批量执行 + checkpoint
+**批次划分:**
+- **Batch A (Task 1-6) 骨架**: Signal/SignalVote/aggregate, BaseStrategy 三段式+limit_pct, runner.build_indicators 共享指标, registry 目录反射自动注册, run_all/run_top, __init__ 导出
+- **Batch B (Task 7-11) 5策略**: trend_breakout(0.7) / oversold_bounce(0.5) / near_limit_up(0.6) / moneyflow_surge(0.6) / sector_momentum(0.5)
+- **Batch C (Task 12-14) 集成**: 冒烟测试 (tests/smoke/test_strategies_smoke.py) + morning_scan 接入 runner (策略候选 ∪ screener top10) + 最终回归
 
-**实现顺序 (14 Task):**
-1. signals.py (Signal + SignalVote + aggregate)
-2. base.py (BaseStrategy 三段式 + limit_pct)
-3. runner.build_indicators (共享指标)
-4. registry.py (目录反射自动注册)
-5. runner.run_all + run_top
-6. __init__.py 导出
-7. trend_breakout.py (0.7)
-8. oversold_bounce.py (0.5)
-9. near_limit_up.py (0.6)
-10. moneyflow_surge.py (0.6)
-11. sector_momentum.py (0.5)
-12. 冒烟测试 + registry 集成
-13. morning_scan 接入 runner
-14. 最终回归 + session 更新
+**review 中抓到的关键 bug:**
+- verdict emoji 死代码 (sector_momentum 用了未定义表情符)
+- 封板 rounding (near_limit_up 距涨停百分比未取整)
+- change_pct 语义 (runner 用 close/prev_close 而非 (close-open)/open)
+- Wilder RSI (原实现用 SMA 平滑, 改为 Wilder EMA, alpha=1/period)
+
+**回归验证 (2026-06-28):** 77 passed, 16 skipped, 0 failures. morning_scan dry-run 策略层产出 6 只候选, monitor dry-run 正常.
 
 ## Git 状态
 
 - 设计 spec: commit 01bccfb
 - 实现计划: commit 71bbf96
-- 待执行: Task 1-14
+- Batch A 骨架: 3a02fce..5e3cada + review 修复 ad7029e / 1b74d4f
+- Batch B 5策略: 9a4fdb2..ba59dc5 + review 修复 c128a82
+- Batch C 集成: 191dc1e (morning_scan 接入 runner + 冒烟测试)
+- 14 Task 全部完成, 无待执行项
