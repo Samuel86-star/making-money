@@ -211,3 +211,50 @@ def _make_rsi_ohlcv(rsi_below_30: bool):
     vols = [10000] * (n - 1) + [15000]  # 量比 1.5
     return pd.DataFrame({"date": dates, "open": opens, "high": highs,
                          "low": lows, "close": closes, "volume": vols})
+
+
+def test_near_limit_up_hit(monkeypatch):
+    """涨8% (主板涨停10%) 距涨停2% → 触发 0.6."""
+    from a_stock.strategies import runner
+    from a_stock.strategies.near_limit_up import NearLimitUp
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_limit_ohlcv(change_pct=8.0))
+    sigs = NearLimitUp().signals("T_600000", "A")  # 主板 10%
+    assert len(sigs) == 1
+    assert sigs[0].confidence == 0.6
+
+
+def test_near_limit_up_miss_already_sealed(monkeypatch):
+    """涨9.9% 距涨停0.1% → 已封板, 不触发."""
+    from a_stock.strategies import runner
+    from a_stock.strategies.near_limit_up import NearLimitUp
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_limit_ohlcv(change_pct=9.9))
+    assert NearLimitUp().signals("T_600000", "A") == []
+
+
+def test_near_limit_up_miss_low_gain(monkeypatch):
+    """涨5% → 不触发 (需>7%)."""
+    from a_stock.strategies import runner
+    from a_stock.strategies.near_limit_up import NearLimitUp
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_limit_ohlcv(change_pct=5.0))
+    assert NearLimitUp().signals("T_600000", "A") == []
+
+
+def _make_limit_ohlcv(change_pct: float):
+    """末根日内涨幅 = change_pct (close/open-1). 70根.
+    NOTE: build_indicators.change_pct = (close-prev_close)/prev_close.
+    构造使 prev_close==open (前根收=open), 这样 change_pct ≈ change_pct 参数."""
+    import pandas as pd
+    n = 70
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    # 前 n-1 根平稳, 末根 prev_close=10.0, last_close=10.0*(1+change_pct/100)
+    base = 10.0
+    closes = [base] * (n - 1) + [base * (1 + change_pct / 100)]
+    opens = closes[:]
+    opens[-1] = base  # open = prev_close, 使 body_pct = change_pct, change_pct = 涨跌幅
+    highs = [max(o, c) + 0.05 for o, c in zip(opens, closes)]
+    lows = [min(o, c) - 0.05 for o, c in zip(opens, closes)]
+    return pd.DataFrame({"date": dates, "open": opens, "high": highs,
+                         "low": lows, "close": closes, "volume": [10000] * n})
