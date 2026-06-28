@@ -317,3 +317,73 @@ def _make_falling_ohlcv():
     return pd.DataFrame({"date": dates, "open": opens, "high": [c+0.1 for c in closes],
                          "low": [c-0.1 for c in closes], "close": closes,
                          "volume": [10000]*n})
+
+
+def test_sector_momentum_hit(monkeypatch):
+    """verdict=持续主线 + 候选涨4% → 触发 0.5."""
+    from a_stock.strategies import runner
+    from a_stock.strategies import sector_momentum as sm
+    from a_stock.strategies.sector_momentum import SectorMomentum
+    runner.clear_cache()
+    # mock sector_rotation.analyze
+    class FakeSR:
+        strongest_repeat_name = "半导体"
+        verdict = "持续主线"
+    monkeypatch.setattr(sm, "_analyze", lambda: FakeSR())
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_change_ohlcv(4.0))
+    sigs = SectorMomentum().signals("T_001", "A")
+    assert len(sigs) == 1
+    assert sigs[0].confidence == 0.5
+
+
+def test_sector_momentum_miss_no_mainline(monkeypatch):
+    """verdict=轮动 (非持续主线) → 不触发."""
+    from a_stock.strategies import runner
+    from a_stock.strategies import sector_momentum as sm
+    from a_stock.strategies.sector_momentum import SectorMomentum
+    runner.clear_cache()
+    class FakeSR:
+        strongest_repeat_name = "半导体"
+        verdict = "轮动"
+    monkeypatch.setattr(sm, "_analyze", lambda: FakeSR())
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_change_ohlcv(4.0))
+    assert SectorMomentum().signals("T_001", "A") == []
+
+
+def test_sector_momentum_miss_low_change(monkeypatch):
+    """持续主线但涨2% (<3) → 不触发."""
+    from a_stock.strategies import runner
+    from a_stock.strategies import sector_momentum as sm
+    from a_stock.strategies.sector_momentum import SectorMomentum
+    runner.clear_cache()
+    class FakeSR:
+        strongest_repeat_name = "半导体"
+        verdict = "持续主线"
+    monkeypatch.setattr(sm, "_analyze", lambda: FakeSR())
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_change_ohlcv(2.0))
+    assert SectorMomentum().signals("T_001", "A") == []
+
+
+def test_sector_momentum_no_rotation_data(monkeypatch):
+    """analyze 返回 None → 不报错, []."""
+    from a_stock.strategies import runner
+    from a_stock.strategies import sector_momentum as sm
+    from a_stock.strategies.sector_momentum import SectorMomentum
+    runner.clear_cache()
+    monkeypatch.setattr(sm, "_analyze", lambda: None)
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_change_ohlcv(4.0))
+    assert SectorMomentum().signals("T_001", "A") == []
+
+
+def _make_change_ohlcv(change_pct: float):
+    """末根涨跌幅 = change_pct (close vs prev_close)."""
+    import pandas as pd
+    n = 70
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    base = 10.0
+    closes = [base] * (n - 1) + [base * (1 + change_pct / 100)]
+    opens = closes[:]
+    opens[-1] = base
+    return pd.DataFrame({"date": dates, "open": opens, "high": [c+0.1 for c in closes],
+                         "low": [c-0.1 for c in closes], "close": closes,
+                         "volume": [10000]*n})
