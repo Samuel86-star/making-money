@@ -7,6 +7,7 @@ from a_stock.strategies.base import BaseStrategy
 
 _SKIP = {"base", "registry", "runner", "signals"}
 _REGISTRY: dict[str, BaseStrategy] = {}
+_scanned = False
 
 
 def _scan() -> None:
@@ -18,7 +19,8 @@ def _scan() -> None:
             continue
         try:
             mod = importlib.import_module(f"a_stock.strategies.{modname}")
-        except Exception:
+        except Exception as e:
+            print(f"⚠ 策略模块 {modname} 导入失败, 跳过: {e}")
             continue
         for attr in vars(mod).values():
             if (isinstance(attr, type) and issubclass(attr, BaseStrategy)
@@ -26,21 +28,22 @@ def _scan() -> None:
                     and attr.__module__ == mod.__name__):
                 inst = attr()
                 _REGISTRY[inst.META.name] = inst
+    _scanned = True
 
 
 def get_all() -> list:
-    if not _REGISTRY:
+    if not _scanned:
         _scan()
     return list(_REGISTRY.values())
 
 
 def get(name: str):
-    if not _REGISTRY:
+    if not _scanned:
         _scan()
     return _REGISTRY.get(name)
 
 
 def list_strategies() -> list:
-    if not _REGISTRY:
+    if not _scanned:
         _scan()
     return list(_REGISTRY.keys())
