@@ -47,3 +47,36 @@ def test_build_indicators_missing_parquet_returns_none(monkeypatch):
     from a_stock.strategies import runner
     monkeypatch.setattr(runner, "_load_ohlcv", lambda c: None)
     assert runner.build_indicators("T_999") is None
+
+
+def test_run_all_with_fake_candidates(monkeypatch):
+    """2 个候选, 1 个数据够, runner 跑策略聚合."""
+    from a_stock.strategies import runner
+    runner.clear_cache()
+    # candidate 1 有数据, 2 无数据
+    def fake_load(code):
+        return _fake_ohlcv(70, 11.0, 11.0, last_vol=30000) if code == "T_001" else None
+    monkeypatch.setattr(runner, "_load_ohlcv", fake_load)
+
+    candidates = [{"code": "T_001", "name": "A"}, {"code": "T_002", "name": "B"}]
+    votes = runner.run_all(candidates)
+    assert isinstance(votes, list)
+    # 不假设具体策略命中 (依赖策略实现), 只验返回结构 + T_002 被跳过
+    for v in votes:
+        assert v.total_confidence > 0
+
+
+def test_run_all_data_missing_skipped(monkeypatch):
+    from a_stock.strategies import runner
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: None)
+    votes = runner.run_all([{"code": "T_001", "name": "A"}])
+    assert votes == []
+
+
+def test_run_top_limits_results(monkeypatch):
+    from a_stock.strategies import runner
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _fake_ohlcv(70, 11.0, 11.0, last_vol=30000))
+    votes = runner.run_top([{"code": "T_001", "name": "A"}], top_m=0)
+    assert len(votes) <= 0

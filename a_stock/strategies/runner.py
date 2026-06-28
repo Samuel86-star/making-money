@@ -61,3 +61,35 @@ def build_indicators(code: str) -> dict | None:
 def clear_cache() -> None:
     """清指标缓存 (测试用)."""
     _INDICATOR_CACHE.clear()
+
+
+def run_all(candidates: list) -> list:
+    """对候选池跑所有策略, 聚合 SignalVote.
+    candidates: [{"code","name",...}] 来自 screener, 已按净流入降序.
+    注入资金流排名 + 板块门到对应策略实例."""
+    from a_stock.strategies.registry import get_all
+
+    # 注入资金流排名 (candidates 顺序即净流入排名)
+    rank_map = {c["code"]: i + 1 for i, c in enumerate(candidates)}
+    strategies = get_all()
+    for st in strategies:
+        if hasattr(st, "_rank"):
+            st._rank = rank_map
+
+    all_signals = []
+    for c in candidates:
+        code = c.get("code", "")
+        name = c.get("name", code)
+        for st in strategies:
+            try:
+                sigs = st.evaluate(code, name)
+                all_signals.extend(sigs or [])
+            except Exception:
+                continue  # 单策略整体炸, 跳过继续
+    return aggregate(all_signals)
+
+
+def run_top(candidates: list, top_m: int = 20) -> list:
+    """run_all 后取 topM."""
+    votes = run_all(candidates)
+    return votes[:max(0, top_m)]
