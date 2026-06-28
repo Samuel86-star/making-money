@@ -18,13 +18,14 @@ def _analyze():
 
 class SectorMomentum(BaseStrategy):
     META = StrategyMeta("sector_momentum", 0.5, "板块动量: 主线确立+候选涨>3%")
+    _sector_result = None  # runner.run_all 注入 (市场级, 全候选共享, 避免每候选重算)
 
     def filter(self, code, name):
         return build_indicators(code) is not None
 
     def signals(self, code, name):
-        sr = _analyze()
-        if not sr or getattr(sr, "verdict", "") != "持续主线":
+        sr = self._sector_result if self._sector_result is not None else _analyze()
+        if not sr or "持续主线" not in getattr(sr, "verdict", ""):
             return []
         ind = build_indicators(code)
         if ind["change_pct"] > 3:

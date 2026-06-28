@@ -84,6 +84,16 @@ def run_all(candidates: list) -> list:
         if hasattr(st, "_rank"):
             st._rank = rank_map
 
+    # 注入板块轮动结果 (市场级, 全候选共享, 避免每候选重算)
+    for st in strategies:
+        if hasattr(st, "_sector_result"):
+            try:
+                from a_stock.sector_rotation import analyze as _sr_analyze
+                st._sector_result = _sr_analyze()
+            except Exception:
+                st._sector_result = None
+            break  # 只需注入一次, 同一实例
+
     all_signals = []
     for c in candidates:
         code = c.get("code", "")

@@ -21,7 +21,7 @@ class NearLimitUp(BaseStrategy):
         dist_to_limit = limit - change_pct
         # 未封板: 当日 high 未触及涨停价 (触及=封板, 不留次日空间).
         # 涨停价 = prev_close * (1 + limit/100).
-        limit_price = ind["prev_close"] * (1 + limit / 100)
+        limit_price = round(ind["prev_close"] * (1 + limit / 100), 2)
         cond = (change_pct > 7 and 0 < dist_to_limit < 3
                 and last["high"] < limit_price)
         if cond:

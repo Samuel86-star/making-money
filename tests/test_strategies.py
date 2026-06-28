@@ -225,12 +225,56 @@ def test_near_limit_up_hit(monkeypatch):
 
 
 def test_near_limit_up_miss_already_sealed(monkeypatch):
-    """涨9.9% 距涨停0.1% → 已封板, 不触发."""
+    """涨9.9% 且 high 触及涨停价(封板) → 不触发. 真实封板形态: high==round涨停价."""
     from a_stock.strategies import runner
     from a_stock.strategies.near_limit_up import NearLimitUp
     runner.clear_cache()
-    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_limit_ohlcv(change_pct=9.9))
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_sealed_ohlcv())
     assert NearLimitUp().signals("T_600000", "A") == []
+
+
+def _make_sealed_ohlcv():
+    """真实封板形态: prev_close=10.0, 涨停价=round(11.0,2)=11.0, high==11.0 触及=封板.
+    change_pct=10.0 (实际封板), 但 high 触及涨停价 → 未封板检查拦截."""
+    import pandas as pd
+    n = 70
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    base = 10.0
+    # 末根 close = 涨停价 11.0 (封板), open = prev_close, high = 11.0 (触及)
+    closes = [base] * (n - 1) + [11.0]
+    opens = closes[:]
+    opens[-1] = base
+    highs = [c + 0.05 for c in closes[:-1]] + [11.0]  # 末根 high = 涨停价 (触及=封板)
+    lows = [c - 0.05 for c in closes[:-1]] + [base]
+    return pd.DataFrame({"date": dates, "open": opens, "high": highs,
+                         "low": lows, "close": closes, "volume": [10000] * n})
+
+
+def test_near_limit_up_rounded_limit_price_blocks_seal(monkeypatch):
+    """涨停价四舍五入到分: prev_close=10.03 → 涨停价 11.03 (非 11.033).
+    high 触及 11.03=封板, 但 close=11.02 (涨9.87%, dist0.13>0 距离门不拦).
+    只有 high<round(limit_price,2) 能拦. 验证 rounding 修复 (未round会把封板误判未封板)."""
+    from a_stock.strategies import runner
+    from a_stock.strategies.near_limit_up import NearLimitUp
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_rounded_seal_ohlcv())
+    assert NearLimitUp().signals("T_600000", "A") == []
+
+
+def _make_rounded_seal_ohlcv():
+    """prev_close=10.03: unrounded 涨停价=11.033, rounded=11.03. high=11.03 触及=封板.
+    close=11.02 (涨9.87%, dist_to_limit=0.13>0 → 距离门放行). 仅 rounding 能拦."""
+    import pandas as pd
+    n = 70
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    base = 10.03
+    closes = [base] * (n - 1) + [11.02]
+    opens = closes[:]
+    opens[-1] = base
+    highs = [c + 0.05 for c in closes[:-1]] + [11.03]  # 末根 high = rounded 涨停价 (触及=封板)
+    lows = [c - 0.05 for c in closes[:-1]] + [base]
+    return pd.DataFrame({"date": dates, "open": opens, "high": highs,
+                         "low": lows, "close": closes, "volume": [10000] * n})
 
 
 def test_near_limit_up_miss_low_gain(monkeypatch):
@@ -387,3 +431,18 @@ def _make_change_ohlcv(change_pct: float):
     return pd.DataFrame({"date": dates, "open": opens, "high": [c+0.1 for c in closes],
                          "low": [c-0.1 for c in closes], "close": closes,
                          "volume": [10000]*n})
+
+
+def test_sector_momentum_matches_real_verdict_format(monkeypatch):
+    """真实 sector_rotation 返回 '🔥 持续主线' (带emoji). 策略必须能匹配, 不能死代码."""
+    from a_stock.strategies import runner
+    from a_stock.strategies import sector_momentum as sm
+    from a_stock.strategies.sector_momentum import SectorMomentum
+    runner.clear_cache()
+    class RealishSR:
+        strongest_repeat_name = "半导体"
+        verdict = "🔥 持续主线"   # 真实格式, 带 emoji 前缀
+    monkeypatch.setattr(sm, "_analyze", lambda: RealishSR())
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_change_ohlcv(4.0))
+    sigs = SectorMomentum().signals("T_001", "A")
+    assert len(sigs) == 1, "策略必须匹配带 emoji 的真实 verdict, 否则生产死代码"

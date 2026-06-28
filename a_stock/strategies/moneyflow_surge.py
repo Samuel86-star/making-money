@@ -8,13 +8,13 @@ from a_stock.strategies.signals import Signal
 
 class MoneyflowSurge(BaseStrategy):
     META = StrategyMeta("moneyflow_surge", 0.6, "资金流异动: 净流入top10+收涨")
-    _rank: dict = {}  # runner 注入
+    _rank = None  # runner 注入 {code: rank}; None 时视为无排名
 
     def filter(self, code, name):
         return build_indicators(code) is not None
 
     def signals(self, code, name):
-        rank = self._rank.get(code, 999)
+        rank = (self._rank or {}).get(code, 999)
         if rank > 10:
             return []
         ind = build_indicators(code)
