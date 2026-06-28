@@ -171,3 +171,43 @@ def _make_short_ohlcv():
     closes = [10.0] * n
     return pd.DataFrame({"date": dates, "open": closes, "high": closes,
                          "low": closes, "close": closes, "volume": [10000] * n})
+
+
+def test_oversold_bounce_hit(monkeypatch):
+    """RSI<30 + 收阳 + 量比≥1.2 → 1信号 0.5."""
+    from a_stock.strategies import runner
+    from a_stock.strategies.oversold_bounce import OversoldBounce
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_rsi_ohlcv(rsi_below_30=True))
+    sigs = OversoldBounce().signals("T_001", "A")
+    assert len(sigs) == 1
+    assert sigs[0].confidence == 0.5
+
+
+def test_oversold_bounce_miss_rsi_high(monkeypatch):
+    from a_stock.strategies import runner
+    from a_stock.strategies.oversold_bounce import OversoldBounce
+    runner.clear_cache()
+    monkeypatch.setattr(runner, "_load_ohlcv", lambda c: _make_rsi_ohlcv(rsi_below_30=False))
+    assert OversoldBounce().signals("T_001", "A") == []
+
+
+def _make_rsi_ohlcv(rsi_below_30: bool):
+    """构造让 RSI<30 (连跌) 或 RSI 高 (连涨) 的序列. 末根收阳 + 量比大."""
+    import pandas as pd
+    n = 70
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    if rsi_below_30:
+        # 前 69 根持续下跌, 末根反弹收阳
+        closes = [20.0 - i * 0.2 for i in range(n - 1)] + [13.0]
+        opens = closes[:]
+        opens[-1] = 12.5  # 末根开低于收, 收阳
+    else:
+        closes = [10.0 + i * 0.1 for i in range(n - 1)] + [17.0]
+        opens = closes[:]
+        opens[-1] = 16.5
+    highs = [max(o, c) + 0.05 for o, c in zip(opens, closes)]
+    lows = [min(o, c) - 0.05 for o, c in zip(opens, closes)]
+    vols = [10000] * (n - 1) + [15000]  # 量比 1.5
+    return pd.DataFrame({"date": dates, "open": opens, "high": highs,
+                         "low": lows, "close": closes, "volume": vols})
