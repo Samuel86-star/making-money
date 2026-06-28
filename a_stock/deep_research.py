@@ -40,6 +40,7 @@ class DeepResearch:
     comps_target: float = 0
     dd_flags: list = field(default_factory=list)
     catalysts: list = field(default_factory=list)
+    thesis_breakers: list = field(default_factory=list)
     verdict: str = ""
 
 
@@ -96,16 +97,56 @@ def catalysts_list(code: str) -> list[str]:
         return []
 
 
-def research(code: str, name: str = "", price: float | None = None,
-             score: float | None = None) -> dict:
-    """完整深研. 返回 dict (供 self_review.gate)."""
-    # 拉实时价
-    if price is None:
-        from a_stock.anomaly import _live_quote
-        q = _live_quote(code)
-        price = q["price"] if q else 0
+def thesis_breakers(r: "DeepResearch") -> list[str]:
+    """论点破坏者: 什么会打破当前买入论点 → 退出触发条件.
+    抄 投资研究员 agent 关键规则7 (论点破坏者) + DD维度.
+    基于已有字段推断, 不抓外部数据, 避免依赖."""
+    if r.veto:
+        return ["已触发一票否决, 论点已失效, 不应建仓"]
+    triggers = []
+    # 业绩类: 净利同比转负 → 成长论点失效
+    if r.net_profit_yoy < 0:
+        triggers.append(
+            f"净利同比{r.net_profit_yoy:+.0f}% 转负 → 成长论点失效, 重评估基本面"
+        )
+    # 盈利能力: ROE 弱 → 盈利质量论点失效
+    if 0 < r.roe < 5:
+        triggers.append(
+            f"ROE {r.roe:.1f}%<5 → 盈利能力弱, 若持续两季无改善, 退出"
+        )
+    # 估值类: PE 过高 → 估值修复论点失效 (戴维斯双杀风险)
+    if r.pe_ttm > 80:
+        triggers.append(
+            f"PE {r.pe_ttm:.0f}>80 → 估值过高, 业绩不及预期即戴维斯双杀, 止损上移"
+        )
+    # 趋势类: 60日深度下跌 → 趋势论点失效
+    if r.momentum_60d < -15:
+        triggers.append(
+            f"60日动量{r.momentum_60d:+.1f}%<-15% → 趋势走坏, 跌破止损即退出"
+        )
+    # 评分类: 评分恶化 → 综合论点失效
+    if 0 < r.score < 40:
+        triggers.append(
+            f"多因子评分{r.score:.0f}<40 → 综合论点弱化, 仓位清零观望"
+        )
+    if not triggers:
+        triggers.append("✅ 暂无明确论点破坏者, 按止损纪律执行即可")
+    return triggers
 
-    # 拉基本面 (降级容忍)
+
+# === 网络/IO 依赖抽离 (供测试 monkeypatch, 避免抓真实数据) ===
+
+def _live_quote_safe(code: str) -> dict:
+    """拉实时价, 失败返回 {}."""
+    try:
+        from a_stock.anomaly import _live_quote
+        return _live_quote(code) or {}
+    except Exception:
+        return {}
+
+
+def _fetch_fundamentals(code: str) -> tuple:
+    """拉基本面 (eps, pe_ttm, net_profit_yoy, roe), 失败返回零值."""
     eps, pe_ttm, net_profit_yoy, roe = 0, 0, 0, 0
     try:
         from a_stock.a_stock_data import tencent_quote
@@ -114,23 +155,11 @@ def research(code: str, name: str = "", price: float | None = None,
             pe_ttm = tq.get("pe_ttm") or tq.get("pe") or 0
     except Exception:
         pass
+    return eps, pe_ttm, net_profit_yoy, roe
 
-    # 评分 (接 Phase 3)
-    if score is None:
-        try:
-            from a_stock.scorers.total_scorer import score_candidate
-            ts = score_candidate(code, name)
-            score = ts.total
-            veto = ts.veto
-            veto_reason = ts.veto_reason
-        except Exception:
-            score, veto, veto_reason = 50, False, ""
-    else:
-        veto = score == -100
-        veto_reason = "ST/暴雷" if veto else ""
 
-    # 动量 (简化: 从 parquet 直接算, 不依赖 strategies 子系统)
-    momentum_60d = 0
+def _momentum_from_parquet(code: str) -> float:
+    """从 parquet 算 60日动量, 失败返回 0."""
     try:
         import pandas as pd
         f = cfg.OHLCV_DIR / f"{code}.parquet"
@@ -138,9 +167,42 @@ def research(code: str, name: str = "", price: float | None = None,
             df = pd.read_parquet(f).tail(120)
             closes = df["Close"].tolist()
             if len(closes) >= 60:
-                momentum_60d = (closes[-1] - closes[-60]) / closes[-60] * 100
+                return (closes[-1] - closes[-60]) / closes[-60] * 100
     except Exception:
         pass
+    return 0.0
+
+
+def _score_safe(code: str, name: str) -> tuple:
+    """评分, 失败返回中性. 返回 (score, veto, veto_reason)."""
+    try:
+        from a_stock.scorers.total_scorer import score_candidate
+        ts = score_candidate(code, name)
+        return ts.total, ts.veto, ts.veto_reason
+    except Exception:
+        return 50, False, ""
+
+
+def research(code: str, name: str = "", price: float | None = None,
+             score: float | None = None) -> dict:
+    """完整深研. 返回 dict (供 self_review.gate)."""
+    # 拉实时价
+    if price is None:
+        q = _live_quote_safe(code)
+        price = q.get("price") or 0
+
+    # 拉基本面 (降级容忍)
+    eps, pe_ttm, net_profit_yoy, roe = _fetch_fundamentals(code)
+
+    # 评分 (接 Phase 3)
+    if score is None:
+        score, veto, veto_reason = _score_safe(code, name)
+    else:
+        veto = score == -100
+        veto_reason = "ST/暴雷" if veto else ""
+
+    # 动量 (从 parquet 直接算, 不依赖 strategies 子系统)
+    momentum_60d = _momentum_from_parquet(code)
 
     r = DeepResearch(
         code=code, name=name or code, price=price,
@@ -169,9 +231,10 @@ def research(code: str, name: str = "", price: float | None = None,
     scale = score_to_position_scale(score)
     r.position_pct = round(min(30, 15 * scale), 1)
 
-    # DD + 催化剂
+    # DD + 催化剂 + 论点破坏者
     r.dd_flags = dd_checklist(r)
     r.catalysts = catalysts_list(code)
+    r.thesis_breakers = thesis_breakers(r)
 
     # 结论
     if r.veto:
@@ -196,6 +259,7 @@ def _to_dict(r: DeepResearch) -> dict:
         "momentum_60d": r.momentum_60d,
         "dcf_target": r.dcf_target, "comps_target": r.comps_target,
         "dd_flags": r.dd_flags, "catalysts": r.catalysts,
+        "thesis_breakers": r.thesis_breakers,
         "verdict": r.verdict,
         "researched_at": datetime.now().isoformat(),
     }
@@ -229,11 +293,14 @@ def main():
     print(f"\n催化剂:")
     for c in r["catalysts"]:
         print(f"  • {c}")
+    print(f"\n论点破坏者 (什么情况下该撤):")
+    for tb in r["thesis_breakers"]:
+        print(f"  • {tb}")
     print(f"\n结论: {r['verdict']}")
 
     # 门禁
+    from a_stock.self_review import gate, review
     if not args.skip_review and not os.environ.get("A_STOCK_SKIP_REVIEW"):
-        from a_stock.self_review import gate, review
         try:
             gate(r)
             print("\n✅ self-review 通过")

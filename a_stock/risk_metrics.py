@@ -12,6 +12,28 @@ DEFAULT_VOL_ANNUAL = {
 }
 TRADING_DAYS = 244
 
+# 板块分类关键词 (顺序敏感: 先匹配先返回, 避免误判)
+_SECTOR_RULES = [
+    ("科技",   ["芯片", "半导体", "信息技术", "软件", "电子", "通信", "5G", "AI", "算力"]),
+    ("医药",   ["医药", "医疗", "生物", "恒瑞", "药", "康"]),
+    ("消费",   ["消费", "食品", "白酒", "酒", "五粮液", "茅台", "家电", "零售"]),
+    ("金融",   ["金融", "券商", "银行", "保险", "东方财富", "证券"]),
+    ("新能源", ["新能源", "光伏", "锂电", "储能", "碳中和"]),
+    ("宽基",   ["创业板", "沪深300", "中证500", "上证50", "科创", "宽基", "指数"]),
+]
+
+
+def classify_sector(code: str, name: str) -> str:
+    """标的板块分类. 优先名称关键词, fallback 宽基ETF/其他."""
+    n = (name or "")
+    for sector, keywords in _SECTOR_RULES:
+        if any(k in n for k in keywords):
+            return sector
+    # ETF 但无明确板块 → 宽基; 否则其他
+    if "etf" in n.lower() or "ETF" in n:
+        return "宽基"
+    return "其他"
+
 
 def _classify_kind(name: str) -> str:
     n = (name or "").lower()
@@ -24,6 +46,72 @@ def _classify_kind(name: str) -> str:
 
 def _annual_vol(code: str, name: str) -> float:
     return DEFAULT_VOL_ANNUAL[_classify_kind(name)]
+
+
+def sector_concentration(positions: list[dict]) -> dict[str, float]:
+    """板块集中度: 各板块市值占比 (%). 供压力测试 + 风险提示."""
+    by_sector: dict[str, float] = {}
+    total_mv = sum(p["mv"] for p in positions) or 1
+    for p in positions:
+        sec = classify_sector(p["code"], p["name"])
+        by_sector[sec] = by_sector.get(sec, 0) + p["mv"]
+    return {s: round(mv / total_mv * 100, 2) for s, mv in by_sector.items()}
+
+
+def _portfolio_returns(positions: list[dict],
+                       returns_by_code: dict[str, list[float]]) -> list[float]:
+    """组合日收益序列 = 各标的日收益按市值加权. 缺数据的标的视为 0 收益."""
+    total_mv = sum(p["mv"] for p in positions)
+    if total_mv <= 0:
+        return []
+    # 对齐长度 (取各标的序列最长, 缺位补 0)
+    max_len = max((len(returns_by_code.get(p["code"], [])) for p in positions), default=0)
+    if max_len == 0:
+        return []
+    pr = [0.0] * max_len
+    for p in positions:
+        code = p["code"]
+        w = p["mv"] / total_mv
+        rs = returns_by_code.get(code, [])
+        for i in range(max_len):
+            pr[i] += w * (rs[i] if i < len(rs) else 0.0)
+    return pr
+
+
+def stress_test(positions: list[dict], total: float,
+                sector_shocks: dict[str, float] | None = None,
+                market_crash: float | None = None) -> list[dict]:
+    """情景压力测试. 返回 [{name, loss, loss_pct}].
+    sector_shocks: {板块: 跌幅} 如 {"消费": -0.10}
+    market_crash: 全市场跌幅 如 -0.08"""
+    sector_shocks = sector_shocks or {}
+    sec_mv = {}
+    for p in positions:
+        sec = classify_sector(p["code"], p["name"])
+        sec_mv[sec] = sec_mv.get(sec, 0) + p["mv"]
+    scenarios = []
+    # 板块冲击场景
+    for sec, shock in sector_shocks.items():
+        mv = sec_mv.get(sec, 0)
+        loss = mv * abs(shock)  # shock 负 → 损失正
+        scenarios.append({
+            "name": f"{sec}板块跌{abs(shock)*100:.0f}%",
+            "loss": round(loss), "loss_pct": round(loss / total * 100, 2) if total else 0,
+        })
+    # 全市场暴跌场景
+    if market_crash is not None:
+        stock_mv = sum(p["mv"] for p in positions)
+        loss = stock_mv * abs(market_crash)
+        scenarios.append({
+            "name": f"全市场暴跌{abs(market_crash)*100:.0f}%",
+            "loss": round(loss), "loss_pct": round(loss / total * 100, 2) if total else 0,
+        })
+    # 默认场景: 无指定时跑一组标准压力 (消费-10%/科技-12%/全市场-8%)
+    if not sector_shocks and market_crash is None:
+        std = {"消费": -0.10, "科技": -0.12, "金融": -0.10, "医药": -0.10}
+        scenarios = stress_test(positions, total, sector_shocks=std)
+        scenarios += stress_test(positions, total, market_crash=-0.08)
+    return scenarios
 
 
 def _live_price(code: str) -> float | None:
@@ -62,9 +150,31 @@ def _load_positions() -> list[dict]:
     return out
 
 
+def _load_returns_by_code(positions: list[dict], lookback: int = 60) -> dict[str, list[float]]:
+    """从 parquet 读各标的日收益率序列 (供 Sortino). 缺数据跳过."""
+    import pandas as pd
+    out: dict[str, list[float]] = {}
+    for p in positions:
+        f = cfg.OHLCV_DIR / f"{p['code']}.parquet"
+        if not f.exists():
+            continue
+        try:
+            df = pd.read_parquet(f).tail(lookback)
+            closes = df["Close"].tolist()
+            if len(closes) < 5:
+                continue
+            rets = [(closes[i] / closes[i-1] - 1) for i in range(1, len(closes))
+                    if closes[i-1] > 0]
+            out[p["code"]] = rets
+        except Exception:
+            continue
+    return out
+
+
 def compute(positions: list[dict], cash: float = 36144.0, risk_free: float = 0.02,
-            rho: float = 0.3) -> dict:
-    """组合风险. 假设内部相关性 rho (A 股经验值 0.3)."""
+            rho: float = 0.3, returns_by_code: dict[str, list[float]] | None = None) -> dict:
+    """组合风险. 假设内部相关性 rho (A 股经验值 0.3).
+    returns_by_code: 各标的日收益序列 (供 Sortino 真实现); 缺则 Sortino 降级为 Sharpe."""
     if not positions:
         return {"total_mv": 0, "cash": cash, "total": cash,
                 "portfolio_vol_annual": 0, "sharpe": 0, "sortino": 0,
@@ -90,6 +200,22 @@ def compute(positions: list[dict], cash: float = 36144.0, risk_free: float = 0.0
     hhi = sum(w ** 2 for w in weights)
     largest = max(weights)
 
+    # Sortino 真实现: 用组合日收益序列算下行波动率 (仅计负收益)
+    if returns_by_code:
+        pr = _portfolio_returns(positions, returns_by_code)
+        downside = [r for r in pr if r < 0]
+        if downside:
+            downside_var = sum(r * r for r in downside) / len(pr)  # 用全样本均值, 非仅负数
+            downside_daily = downside_var ** 0.5
+            downside_annual = downside_daily * (TRADING_DAYS ** 0.5)
+            # Sortino: (预期收益 - rf) / 下行波动; 这里预期收益用 0 (无历史均值假设), 与 Sharpe 一致
+            sortino = (0.0 - risk_free) / downside_annual if downside_annual else 0.0
+            sortino = round(sortino, 2)
+        else:
+            sortino = float("inf")  # 无下行风险
+    else:
+        sortino = round(sharpe, 2)  # 降级: 无收益序列时与 Sharpe 一致
+
     return {
         "total_mv": round(total_stock),
         "cash": round(cash),
@@ -98,7 +224,7 @@ def compute(positions: list[dict], cash: float = 36144.0, risk_free: float = 0.0
         "portfolio_vol_annual": round(adj_vol, 4),
         "daily_vol": round(daily_vol, 4),
         "sharpe": round(sharpe, 2),
-        "sortino": round(sharpe, 2),  # FIXME: 暂用 Sharpe 替代, 需真实现下行波动率
+        "sortino": sortino,
         "var_95_1d": round(var_95_1d),
         "var_95_1d_pct": round(var_95_1d / total * 100, 2),
         "max_dd_5d_95": round(max_dd_5d_95),
@@ -129,7 +255,8 @@ def main():
     args = ap.parse_args()
 
     positions = _load_positions()
-    r = compute(positions, args.cash, args.rf)
+    returns_by_code = _load_returns_by_code(positions) if positions else {}
+    r = compute(positions, args.cash, args.rf, returns_by_code=returns_by_code)
 
     print(f"=== 组合风险报告 ({date.today()}) ===\n")
     print(f"股票市值:   {r['total_mv']:>10,} 元 ({len(positions)} 只)")
@@ -138,7 +265,9 @@ def main():
     print(f"组合年化波动率:  {r['portfolio_vol_annual']:.1%}")
     print(f"日波动率:        {r['daily_vol']:.2%}")
     print(f"Sharpe (μ=0):    {r['sharpe']:.2f}")
-    print(f"Sortino:         {r['sortino']:.2f}")
+    sortino_str = "inf (无下行)" if r["sortino"] == float("inf") else f"{r['sortino']:.2f}"
+    print(f"Sortino:         {sortino_str}"
+          + ("" if returns_by_code else "  (无收益序列, 降级=Sharpe)"))
     print(f"1d VaR 95%:      {r['var_95_1d']:>6,} 元 ({r['var_95_1d_pct']:.2f}%)")
     print(f"5d MaxDD 95%:    {r['max_dd_5d_95']:>6,} 元 ({r['max_dd_5d_95_pct']:.2f}%)")
     print(f"HHI 集中度:      {r['hhi']:.4f}  (1/N={1/max(r['n_positions'],1):.4f})")
@@ -148,6 +277,21 @@ def main():
         max_w = max(p["weight"] for p in r["positions"])
         for p in r["positions"]:
             print(_bar(p["code"], p["weight"], max_w))
+
+    # 板块集中度
+    if positions:
+        print("\n=== 板块集中度 ===")
+        sc = sector_concentration(positions)
+        for sec, pct in sorted(sc.items(), key=lambda x: -x[1]):
+            print(f"  {sec:<6} {pct:>6.1f}%")
+
+    # 压力测试
+    if positions:
+        print("\n=== 压力测试 ===")
+        total = r["total"] or 1
+        scenarios = stress_test(positions, total)
+        for s in scenarios:
+            print(f"  {s['name']:<18} 损失 {s['loss']:>6,} 元 ({s['loss_pct']:.2f}%)")
 
     print("\n=== 风险提示 ===")
     warnings = []
@@ -159,6 +303,12 @@ def main():
         warnings.append(f"  ⚠️  1d VaR {r['var_95_1d_pct']:.1f}% 较大, 注意日内回撤")
     if r["n_positions"] < 4:
         warnings.append(f"  ⚠️  持仓仅 {r['n_positions']} 只, 分散不足")
+    # 板块集中度提示
+    if positions:
+        sc = sector_concentration(positions)
+        max_sec, max_pct = max(sc.items(), key=lambda x: x[1]) if sc else ("", 0)
+        if max_pct > 50:
+            warnings.append(f"  ⚠️  {max_sec}板块占 {max_pct:.0f}% > 50%, 板块集中风险")
     if not warnings:
         warnings.append("  ✅ 当前风险在可控范围")
     print("\n".join(warnings))

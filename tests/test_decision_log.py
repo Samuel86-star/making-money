@@ -8,6 +8,15 @@ T = "T_"  # test code prefix
 
 def setup_function(_):
     db.init_decisions_db()
+    _clean_test_data()
+
+
+def teardown_function(_):
+    """测试后清 T_ 数据, 防残留污染生产库."""
+    _clean_test_data()
+
+
+def _clean_test_data():
     with db.conn(cfg.DECISIONS_DB) as c:
         # 只清测试数据,保留真实持仓和 watchlist
         c.execute("DELETE FROM decisions WHERE code LIKE ? OR parent_id IN (SELECT id FROM decisions WHERE code LIKE ?)", (f"{T}%", f"{T}%"))
