@@ -38,9 +38,28 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
         return {"error": "no_market_data"}
     print(f"  拉到 {len(stocks)} 只候选 (资金流 top{top_n})")
 
-    # 2. 多因子评分
+    # === 策略层 (Signal Bridge): 策略候选 + screener 候选并集 ===
+    strategy_codes = set()
+    try:
+        from a_stock.strategies.runner import run_top
+        votes = run_top(stocks, top_m=20)
+        strategy_codes = {v.code for v in votes}
+        print(f"  策略层产出 {len(strategy_codes)} 只候选 (top confidence)")
+        for v in votes[:5]:
+            print(f"    {v.name}({v.code}) conf={v.total_confidence:.2f} "
+                  f"[{','.join(v.strategies)}] {v.top_reason}")
+    except Exception as e:
+        print(f"  ⚠ 策略层失败, 回退纯 screener: {e}")
+        strategy_codes = set()
+
+    # 2. 多因子评分 — 策略候选 ∪ screener top10
     scored = []
-    for s in stocks:
+    scored_codes = strategy_codes | {s["code"] for s in stocks[:10]}
+    # 建 code→stock 映射 (策略产出的 code 可能不在 screener 前10, 用其 code 查 stock)
+    stock_map = {s["code"]: s for s in stocks}
+    for code in scored_codes:
+        s = stock_map.get(code, {"code": code, "name": code,
+                                 "net_flow": 0, "change_pct": 0})
         try:
             ts = score_candidate(s["code"], s.get("name", ""))
             d = to_dict(ts)
@@ -48,7 +67,7 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
             d["change_pct"] = s.get("change_pct", 0)
             scored.append(d)
         except Exception as e:
-            print(f"  ⚠ {s['code']} 评分失败: {e}")
+            print(f"  ⚠ {code} 评分失败: {e}")
 
     # 3. 按 (总分, 资金流) 排序, veto 的排除
     valid = [s for s in scored if not s.get("veto")]
