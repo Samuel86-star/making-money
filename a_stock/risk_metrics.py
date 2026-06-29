@@ -129,25 +129,68 @@ def _live_price(code: str) -> float | None:
 
 
 def _load_positions() -> list[dict]:
+    """当前持仓 = sum(buy/add) - sum(reduce). reduce 行 linked parent_id.
+
+    成本基 (06-29教训): lot 制下剩余成本=父lot买入价; 多 lot 时取移动加权平均.
+    返回每标的 cost / mv / unrealized_pnl."""
     conn = sqlite3.connect(str(cfg.DECISIONS_DB))
     conn.row_factory = sqlite3.Row
     rows = conn.execute("""
-        SELECT code, name, price, quantity
+        SELECT id, code, name, price, quantity
         FROM decisions
         WHERE action IN ('buy','add') AND close_date IS NULL
     """).fetchall()
+    reduces = conn.execute("""
+        SELECT parent_id, SUM(quantity) AS qty
+        FROM decisions
+        WHERE action='reduce' AND close_date IS NOT NULL
+        GROUP BY parent_id
+    """).fetchall()
     conn.close()
+    red_by_parent = {r["parent_id"]: r["qty"] for r in reduces}
     agg = {}
     for r in rows:
         c = r["code"]
         if c not in agg:
-            agg[c] = {"code": c, "name": r["name"] or c, "qty": 0}
-        agg[c]["qty"] += r["quantity"]
+            agg[c] = {"code": c, "name": r["name"] or c, "qty": 0, "cost_sum": 0.0}
+        remaining = r["quantity"] - red_by_parent.get(r["id"], 0)
+        if remaining > 0:
+            agg[c]["qty"] += remaining
+            agg[c]["cost_sum"] += r["price"] * remaining
     out = []
     for c, p in agg.items():
+        if p["qty"] <= 0:
+            continue
         px = _live_price(c) or 0
-        out.append({**p, "price": px, "mv": px * p["qty"], "vol": _annual_vol(c, p["name"])})
+        cost = p["cost_sum"] / p["qty"] if p["qty"] else 0
+        out.append({**p, "price": px, "cost": cost, "mv": px * p["qty"],
+                    "unrealized_pnl": (px - cost) * p["qty"],
+                    "vol": _annual_vol(c, p["name"])})
     return out
+
+
+def check_reduce_label_consistency() -> list[dict]:
+    """校验 reduce 标签与 pnl 符号一致 (06-29教训: partial_take_profit 不应 pnl<0).
+
+    返回异常列表 [{id, code, reason, pnl_pct}]."""
+    conn = sqlite3.connect(str(cfg.DECISIONS_DB))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT id, code, close_reason, pnl_pct FROM decisions
+        WHERE action='reduce' AND close_date IS NOT NULL AND pnl_pct IS NOT NULL
+    """).fetchall()
+    conn.close()
+    anomalies = []
+    for r in rows:
+        reason = r["close_reason"] or ""
+        pnl = r["pnl_pct"] or 0
+        if "take_profit" in reason and pnl < 0:
+            anomalies.append({"id": r["id"], "code": r["code"],
+                              "reason": reason, "pnl_pct": round(pnl, 2)})
+        elif "stop_loss" in reason and pnl > 0:
+            anomalies.append({"id": r["id"], "code": r["code"],
+                              "reason": reason, "pnl_pct": round(pnl, 2)})
+    return anomalies
 
 
 def _load_returns_by_code(positions: list[dict], lookback: int = 60) -> dict[str, list[float]]:
@@ -234,9 +277,12 @@ def compute(positions: list[dict], cash: float = 36144.0, risk_free: float = 0.0
         "positions": [
             {"code": p["code"], "name": p["name"][:10],
              "weight": round(p["mv"] / total * 100, 2),
-             "vol": p["vol"], "mv": round(p["mv"])}
+             "vol": p["vol"], "mv": round(p["mv"]),
+             "cost": round(p.get("cost", 0), 4),
+             "unrealized_pnl": round(p.get("unrealized_pnl", 0))}
             for p in positions
         ],
+        "total_unrealized_pnl": round(sum(p.get("unrealized_pnl", 0) for p in positions)),
     }
 
 
@@ -278,6 +324,15 @@ def main():
         for p in r["positions"]:
             print(_bar(p["code"], p["weight"], max_w))
 
+    # 持仓成本与浮盈 (06-29教训: 报盈亏前必查真实成本)
+    if positions:
+        print("\n=== 持仓成本与浮盈 ===")
+        print(f"  {'代码':<8}{'持仓':<7}{'成本':<10}{'现价':<10}{'浮盈':<10}")
+        for p, rp in zip(positions, r["positions"]):
+            pnl = rp["unrealized_pnl"]
+            print(f"  {p['code']:<8}{p['qty']:<7}{p.get('cost',0):<10.4f}{p['price']:<10.4f}{pnl:<+10.0f}")
+        print(f"  合计浮盈: {r['total_unrealized_pnl']:+,} 元")
+
     # 板块集中度
     if positions:
         print("\n=== 板块集中度 ===")
@@ -309,6 +364,11 @@ def main():
         max_sec, max_pct = max(sc.items(), key=lambda x: x[1]) if sc else ("", 0)
         if max_pct > 50:
             warnings.append(f"  ⚠️  {max_sec}板块占 {max_pct:.0f}% > 50%, 板块集中风险")
+    # reduce 标签一致性校验 (06-29教训: take_profit 不应 pnl<0)
+    anomalies = check_reduce_label_consistency()
+    if anomalies:
+        for a in anomalies:
+            warnings.append(f"  ⚠️  id={a['id']} {a['code']} 标签{a['reason']}与pnl{a['pnl_pct']:+.1f}%矛盾")
     if not warnings:
         warnings.append("  ✅ 当前风险在可控范围")
     print("\n".join(warnings))

@@ -164,3 +164,119 @@ def test_portfolio_returns_handles_missing_code():
     # [0.01*0.5 + 0, 0.02*0.5 + 0]
     assert abs(pr[0] - 0.005) < 1e-6
     assert abs(pr[1] - 0.01) < 1e-6
+
+
+# === _load_positions net reduce (bugfix: 之前只 sum buy/add, 没减 reduce) ===
+
+def test_load_positions_nets_reduces(tmp_path, monkeypatch):
+    """_load_positions 必须减去 reduce 数量. buy 1000 - reduce 600 = 400."""
+    import a_stock.config as cfg
+    import a_stock.db as db
+    from a_stock.risk_metrics import _load_positions
+    from a_stock.a_screen.decision_log import reduce_position
+
+    tmp_db = tmp_path / "t_decisions.sqlite"
+    monkeypatch.setattr(cfg, "DECISIONS_DB", tmp_db)
+    db.init_decisions_db()
+
+    pid = db.insert_decision(code="T_RISK1", name="T测试", strategy="mid",
+                             action="buy", decision_date="2026-06-29",
+                             price=1.0, quantity=1000)
+    reduce_position(pid, reduce_price=1.1, reduce_qty=600, reason="partial_take_profit")
+    monkeypatch.setattr("a_stock.risk_metrics._live_price", lambda c: 1.0)
+
+    positions = _load_positions()
+    pos = [p for p in positions if p["code"] == "T_RISK1"][0]
+    assert pos["qty"] == 400, f"期望 400 (1000-600), 实际 {pos['qty']}"
+
+
+# === 成本基 + unrealized_pnl (06-29教训: 报盈亏前必查真实成本) ===
+
+def test_load_positions_has_cost_and_unrealized_pnl(tmp_path, monkeypatch):
+    """_load_positions 返回 cost (父lot价) 和 unrealized_pnl."""
+    import a_stock.config as cfg
+    import a_stock.db as db
+    from a_stock.risk_metrics import _load_positions
+    from a_stock.a_screen.decision_log import reduce_position
+
+    tmp_db = tmp_path / "t_decisions.sqlite"
+    monkeypatch.setattr(cfg, "DECISIONS_DB", tmp_db)
+    db.init_decisions_db()
+
+    pid = db.insert_decision(code="T_COST1", name="T成本", strategy="mid",
+                             action="buy", decision_date="2026-06-29",
+                             price=10.0, quantity=100)
+    reduce_position(pid, reduce_price=11.0, reduce_qty=40, reason="partial_take_profit")
+    monkeypatch.setattr("a_stock.risk_metrics._live_price", lambda c: 12.0)
+
+    positions = _load_positions()
+    pos = [p for p in positions if p["code"] == "T_COST1"][0]
+    assert pos["qty"] == 60  # 100-40
+    assert pos["cost"] == 10.0  # 父lot价, 减仓不改成本
+    # 浮盈 = (12 - 10) * 60 = 120
+    assert abs(pos["unrealized_pnl"] - 120.0) < 1e-6
+
+
+def test_load_positions_multi_lot_weighted_cost(tmp_path, monkeypatch):
+    """多 lot 取移动加权平均成本: 100@10 + 100@12 → 成本 11."""
+    import a_stock.config as cfg
+    import a_stock.db as db
+    from a_stock.risk_metrics import _load_positions
+
+    tmp_db = tmp_path / "t_decisions.sqlite"
+    monkeypatch.setattr(cfg, "DECISIONS_DB", tmp_db)
+    db.init_decisions_db()
+    db.insert_decision(code="T_COST2", name="T多lot", strategy="mid",
+                       action="buy", decision_date="2026-06-29",
+                       price=10.0, quantity=100)
+    db.insert_decision(code="T_COST2", name="T多lot", strategy="mid",
+                       action="add", decision_date="2026-06-29",
+                       price=12.0, quantity=100)
+    monkeypatch.setattr("a_stock.risk_metrics._live_price", lambda c: 11.0)
+
+    positions = _load_positions()
+    pos = [p for p in positions if p["code"] == "T_COST2"][0]
+    assert pos["qty"] == 200
+    assert abs(pos["cost"] - 11.0) < 1e-6  # (100*10+100*12)/200
+
+
+# === reduce 标签一致性校验 ===
+
+def test_check_reduce_label_flags_take_profit_with_loss(tmp_path, monkeypatch):
+    """partial_take_profit 但 pnl<0 → 标记异常."""
+    import a_stock.config as cfg
+    import a_stock.db as db
+    from a_stock.risk_metrics import check_reduce_label_consistency
+    from a_stock.a_screen.decision_log import reduce_position
+
+    tmp_db = tmp_path / "t_decisions.sqlite"
+    monkeypatch.setattr(cfg, "DECISIONS_DB", tmp_db)
+    db.init_decisions_db()
+
+    pid = db.insert_decision(code="T_LBL1", name="T标签", strategy="mid",
+                             action="buy", decision_date="2026-06-29",
+                             price=10.0, quantity=100)
+    reduce_position(pid, reduce_price=9.0, reduce_qty=50, reason="partial_take_profit")  # 亏却标止盈
+
+    anomalies = check_reduce_label_consistency()
+    assert len(anomalies) == 1
+    assert anomalies[0]["code"] == "T_LBL1"
+
+
+def test_check_reduce_label_clean_when_consistent(tmp_path, monkeypatch):
+    """标签与pnl一致 → 无异常."""
+    import a_stock.config as cfg
+    import a_stock.db as db
+    from a_stock.risk_metrics import check_reduce_label_consistency
+    from a_stock.a_screen.decision_log import reduce_position
+
+    tmp_db = tmp_path / "t_decisions.sqlite"
+    monkeypatch.setattr(cfg, "DECISIONS_DB", tmp_db)
+    db.init_decisions_db()
+
+    pid = db.insert_decision(code="T_LBL2", name="T标签", strategy="mid",
+                             action="buy", decision_date="2026-06-29",
+                             price=10.0, quantity=100)
+    reduce_position(pid, reduce_price=11.0, reduce_qty=50, reason="partial_take_profit")  # 盈+止盈, 一致
+
+    assert check_reduce_label_consistency() == []

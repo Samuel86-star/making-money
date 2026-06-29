@@ -71,15 +71,36 @@ rules:
     note: "组合整体日内跌超3%"
 
   # === 持仓获利规则 ===
-  - name: "创业板ETF减仓-破4.00"
+  - name: "创业板ETF结构止损-破前日低"
     code: "159915"
-    condition: { field: "price", op: "<=", value: 4.00 }
+    condition: { field: "price", op: "<=", value: 4.04 }
     action: "reduce"
-    shares: 1000
+    shares: 500
     max_trigger_per_day: 1
     cooldown_min: 0
     active: true
-    note: "回撤到4.00, 止盈1000股"
+    note: "ATR结构止损(入场4.215-2*ATR0.148≈4.04), 留底仓500, 避免浅止损被洗"
+    extra: { time_after: "14:00" }
+
+  - name: "ETF浅止损护栏-勿日内低点卖"
+    condition: { field: "change_pct", op: "<=", value: -2 }
+    action: "info"
+    max_trigger_per_day: 2
+    cooldown_min: 30
+    active: true
+    note: "ETF跌2%仅日内噪音, 未破前日低/MA20勿浅止损卖低点 (06-29教训)"
+    applies_to: "all_holdings"
+    extra: { time_before: "10:00" }
+
+  - name: "早盘急杀冷静-勿恐慌卖"
+    condition: { field: "change_pct", op: "<=", value: -3 }
+    action: "info"
+    max_trigger_per_day: 1
+    cooldown_min: 60
+    active: true
+    note: "早盘急杀大概率V回, 等14:00后判结构位, 不在低点砍 (06-29教训)"
+    applies_to: "all_holdings"
+    extra: { time_after: "09:30", time_before: "10:30" }
 
   - name: "恒瑞止盈-破55"
     code: "600276"
@@ -89,3 +110,22 @@ rules:
     cooldown_min: 0
     active: true
     note: "中线目标55, 触发考虑减仓"
+
+  - name: "恒瑞止损-破48"
+    code: "600276"
+    condition: { field: "price", op: "<=", value: 48.0 }
+    action: "reduce"
+    shares: 200
+    max_trigger_per_day: 1
+    cooldown_min: 0
+    active: true
+    note: "破MA20+前低, 反转失败, 全减200股离场"
+
+  - name: "半导体材料设备ETF-回踩关注"
+    code: "159516"
+    condition: { field: "price", op: "<=", value: 1.85 }
+    action: "info"
+    max_trigger_per_day: 1
+    cooldown_min: 240
+    active: true
+    note: "回踩1.85关注试仓, 纯卡脖子材料+装备链, 近20日+52%抗跌"

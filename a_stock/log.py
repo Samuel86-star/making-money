@@ -8,6 +8,7 @@ import a_stock.db as db
 from a_stock.a_screen.decision_log import (
     add_buy, add_add, close, update_plan, list_open, get,
     reduce_position, add_to_watchlist, remove_from_watchlist, list_watchlist,
+    cost_report,
 )
 from a_stock.a_screen.snapshot import load_snapshot
 
@@ -128,6 +129,33 @@ def cmd_reduce(args):
     new_id = reduce_position(args.parent_id, args.price, args.qty, args.reason)
     row = get(new_id)
     print(f"✓ 减仓 id={new_id}  parent={args.parent_id}  pnl={row['pnl_pct']:+.2f}%")
+    # 强化"减仓不改剩余成本"肌肉记忆 (06-29教训)
+    parent = get(args.parent_id)
+    if parent:
+        rep = cost_report(parent["code"])
+        if rep:
+            for lot in rep["lots"]:
+                if lot["id"] == args.parent_id:
+                    print(f"  剩余 {lot['remaining']}股, 成本仍 {lot['cost']:.4f} (减仓不改成本)")
+
+
+def cmd_cost(args):
+    """查某标的真实成本 (防瞎猜, 报盈亏前必跑)."""
+    rep = cost_report(args.code)
+    if not rep:
+        print(f"无 {args.code} 持仓")
+        return
+    print(f"=== {args.code} 真实成本 ===")
+    total_remaining = 0
+    total_realized = 0.0
+    for lot in rep["lots"]:
+        print(f"  lot id={lot['id']} {lot['date']}: 买{lot['buy_qty']}@{lot['cost']:.4f} | "
+              f"已减{lot['reduced_qty']} | 剩余{lot['remaining']} 成本仍{lot['cost']:.4f} | "
+              f"已实现{lot['realized']:+.0f}")
+        total_remaining += lot["remaining"]
+        total_realized += lot["realized"]
+    print(f"  合计: 剩余{total_remaining}股, 已实现{total_realized:+.0f}元")
+    print(f"  注: 成本取父lot买入价, 减仓不改剩余成本")
 
 
 def cmd_watchlist_add(args):
@@ -207,6 +235,10 @@ def main():
     p_reduce.add_argument("--qty", type=int, required=True)
     p_reduce.add_argument("--reason", required=True, choices=["partial_take_profit", "partial_stop_loss", "manual"])
     p_reduce.set_defaults(func=cmd_reduce)
+
+    p_cost = sub.add_parser("cost")
+    p_cost.add_argument("code")
+    p_cost.set_defaults(func=cmd_cost)
 
     p_watchlist = sub.add_parser("watchlist")
     w_sub = p_watchlist.add_subparsers(dest="watchlist_cmd", required=True)

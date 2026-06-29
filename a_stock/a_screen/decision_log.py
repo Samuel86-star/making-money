@@ -63,6 +63,36 @@ def list_open(strategy: str | None = None):
         ).fetchall()
 
 
+def cost_report(code: str) -> dict | None:
+    """某标的真实成本报告 (防瞎猜, 06-29教训).
+
+    返回 {code, lots:[{id,date,price,buy_qty,reduced_qty,remaining,cost,realized}]}
+    每个未平仓 buy/add lot: 剩余量 = buy_qty - Σ挂该lot的reduce量, 成本=lot买入价(不变).
+    realized = Σ (reduce价 - lot成本) * reduce量."""
+    with db.conn(cfg.DECISIONS_DB) as c:
+        lots = c.execute(
+            "SELECT * FROM decisions WHERE code=? AND action IN ('buy','add') "
+            "AND close_date IS NULL ORDER BY id", (code,)).fetchall()
+        if not lots:
+            return None
+        reduces = c.execute(
+            "SELECT * FROM decisions WHERE code=? AND action='reduce' "
+            "AND close_date IS NOT NULL ORDER BY id", (code,)).fetchall()
+    out = {"code": code, "lots": []}
+    for lot in lots:
+        linked = [r for r in reduces if r["parent_id"] == lot["id"]]
+        reduced_qty = sum(r["quantity"] for r in linked)
+        remaining = lot["quantity"] - reduced_qty
+        realized = sum((r["price"] - lot["price"]) * r["quantity"] for r in linked)
+        out["lots"].append({
+            "id": lot["id"], "date": lot["decision_date"],
+            "cost": lot["price"], "buy_qty": lot["quantity"],
+            "reduced_qty": reduced_qty, "remaining": remaining,
+            "realized": round(realized, 2),
+        })
+    return out
+
+
 def get(decision_id: int):
     with db.conn(cfg.DECISIONS_DB) as c:
         return c.execute("SELECT * FROM decisions WHERE id=?",

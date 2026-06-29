@@ -18,7 +18,7 @@ STATE_FILE = cfg.DATA_DIR / "monitor_state.json"
 RULES_FILE = Path(__file__).parent / "rules.yaml"
 MONITOR_ERROR_LOG = cfg.DATA_DIR / "monitor_errors.jsonl"
 
-CANDIDATE_CODES = ["515650", "600276", "300059", "159801", "159915", "515880"]
+CANDIDATE_CODES = ["515650", "600276", "300059", "159801", "159915", "515880", "159516"]
 
 # 非阻塞锁防重入 (抄 aiagents-stock sector_strategy_scheduler.py:98-108)
 # LLM/异动分析易超时, 下个时间点到了上一个没完, blocking=False 直接跳过

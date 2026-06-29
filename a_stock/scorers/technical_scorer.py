@@ -70,12 +70,16 @@ def score(code: str) -> FactorScore:
 
     # 适配列名 (Open/High/Low/Close/Volume 首字母大写)
     closes = [r.get("Close") or r.get("close") for r in rows if r.get("Close") or r.get("close")]
+    vols = [r.get("Volume") or r.get("volume") for r in rows
+            if r.get("Volume") or r.get("volume")]
     ma5 = _sma(closes, 5)
     ma20 = _sma(closes, 20)
     ma60 = _sma(closes, 60)
     rsi = _rsi(closes)
     dif, dea, hist = _macd(closes)
     price = closes[-1]
+    prev_close = closes[-2] if len(closes) >= 2 else price
+    price_up = price > prev_close
 
     s = 50
     detail = {"ma5": round(ma5, 2), "ma20": round(ma20, 2), "rsi": round(rsi, 1)}
@@ -106,5 +110,27 @@ def score(code: str) -> FactorScore:
     elif rsi > 70:
         s -= 10  # 超买
         detail["rsi_state"] = "超买"
+
+    # 量价验证 (volume 历史未用, 06-29教训核心补强)
+    # 量比 = 当日量 / 近20日均量
+    vol_ratio = 1.0
+    if len(vols) >= 20:
+        avg_vol = sum(vols[-21:-1]) / 20 if len(vols) >= 21 else sum(vols[-20:]) / 20
+        if avg_vol > 0:
+            vol_ratio = vols[-1] / avg_vol
+    high20 = max(closes[-20:]) if len(closes) >= 20 else price
+    if vol_ratio != 1.0:
+        if price_up and price > high20 * 0.999 and vol_ratio >= 1.5:
+            s += 10
+            detail["vol_breakout"] = "放量突破"
+        elif price_up and vol_ratio < 0.7:
+            s -= 8
+            detail["vol_divergence"] = "价升量缩"
+        elif not price_up and vol_ratio >= 1.5:
+            s -= 10
+            detail["vol_breakdown"] = "放量破位"
+        elif not price_up and vol_ratio < 0.8:
+            s += 5  # 缩量破位=洗盘, 反向加分
+            detail["vol_breakdown"] = "缩量洗盘"
 
     return FactorScore(score=s, detail=detail)
