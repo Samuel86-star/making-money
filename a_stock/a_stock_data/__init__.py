@@ -13,5 +13,8 @@ from a_stock.a_stock_data.eastmoney import (
 from a_stock.a_stock_data.ths import ths_hot_reason, ths_eps_forecast, hsgt_realtime
 from a_stock.a_stock_data.sectors import industry_comparison
 from a_stock.a_stock_data.financials import get_financials
+from a_stock.a_stock_data.etf_holdings import (
+    get_etf_holdings, get_as_of_date, has_north_exchange, summarize, is_north_code,
+)
 
 __version__ = "1.0.0"
