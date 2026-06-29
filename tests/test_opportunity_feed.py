@@ -1,5 +1,4 @@
 """opportunity_feed 单元测试. mock 各数据源, 验证4类机会聚合+排序."""
-from unittest.mock import patch
 from a_stock.web.opportunity_feed import collect_opportunities
 
 
@@ -59,7 +58,8 @@ def test_pullback_uses_real_scorer(tmp_path, monkeypatch):
                         lambda: ["T_REAL1"])
     monkeypatch.setattr("a_stock.web.opportunity_feed._holding_cost",
                         lambda code: 10.0)
-    sigs = __import__("a_stock.web.opportunity_feed", fromlist=["_pullback_signals"])._pullback_signals()
+    from a_stock.web.opportunity_feed import _pullback_signals
+    sigs = _pullback_signals()
     assert len(sigs) == 1
     assert sigs[0]["code"] == "T_REAL1"
     assert "MA5" in sigs[0]["ma"]

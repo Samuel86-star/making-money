@@ -21,7 +21,10 @@ def _watched_codes() -> list[str]:
 
 
 def _holding_cost(code: str) -> float | None:
-    """某标的真实成本 (移动加权, lot制剩余). 无持仓返回 None."""
+    """某标的真实成本 (移动加权, lot制剩余). 无持仓返回 None.
+
+    NOTE: 成本lot逻辑与 a_stock/risk_metrics._load_positions 重复 (06-29教训fix),
+    后续可抽到 db.py 共享. 当前两处各自维护."""
     conn = sqlite3.connect(str(cfg.DECISIONS_DB))
     conn.row_factory = sqlite3.Row
     lots = conn.execute(
@@ -44,18 +47,22 @@ def _holding_cost(code: str) -> float | None:
 def _pullback_signals() -> list[dict]:
     """回踩买点: 多头排列+回踩MA5/MA10不破."""
     from a_stock.scorers.technical_scorer import score
+    from a_stock.risk_metrics import _live_price
+    import logging
     out = []
     for code in _watched_codes():
         try:
             fs = score(code)
-        except Exception:
+        except Exception as e:
+            logging.getLogger("a_stock.web").warning("pullback score %s failed: %s", code, e)
             continue
-        pb = fs.detail.get("pullback_buy")
+        pb = fs.detail.get("pullback_buy") if fs and fs.detail else None
         if not pb:
             continue
+        px = _live_price(code) or 0.0
         out.append({
             "code": code, "name": "", "ma": pb,
-            "price": 0.0, "cost": _holding_cost(code) or 0.0,
+            "price": px, "cost": _holding_cost(code) or 0.0,
         })
     return out
 
@@ -94,10 +101,14 @@ def _candidate_signals() -> list[dict]:
 def _rule_signals() -> list[dict]:
     """规则触发+watchlist回踩提醒: 读 rules.yaml + monitor_log."""
     import yaml
+    from a_stock.risk_metrics import _live_price
     rules_file = cfg.ROOT / "a_stock" / "rules.yaml"
     if not rules_file.exists():
         return []
-    rules = yaml.safe_load(rules_file.read_text()).get("rules", [])
+    try:
+        rules = yaml.safe_load(rules_file.read_text()).get("rules", [])
+    except yaml.YAMLError:
+        return []
     conn = sqlite3.connect(str(cfg.DECISIONS_DB))
     conn.row_factory = sqlite3.Row
     fired = conn.execute(
@@ -112,10 +123,11 @@ def _rule_signals() -> list[dict]:
         if not code:
             continue
         is_fired = (rule["name"], code) in fired_keys
+        current_px = _live_price(code) or 0.0
         out.append({
             "code": code, "name": "", "desc": rule.get("note", ""),
             "trigger_price": rule.get("condition", {}).get("value"),
-            "current": 0.0, "fired": is_fired,
+            "current": current_px, "fired": is_fired,
         })
     return out
 
