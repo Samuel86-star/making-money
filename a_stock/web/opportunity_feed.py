@@ -78,22 +78,25 @@ def _anomaly_signals() -> list[dict]:
     for s in sigs:
         out.append({
             "code": s.get("code", ""), "name": s.get("name", ""),
-            "desc": f"{s.get('type','')} 涨速{s.get('speed_3min',0)}% 量比{s.get('vol_ratio',0)}",
-            "change": s.get("speed_3min", 0),
+            "desc": f"{s.get('type','') or ''} 涨速{s.get('speed_3min') or 0}% 量比{s.get('vol_ratio') or 0}",
+            "change": s.get("speed_3min") or 0,
         })
     return out
 
 
 def _candidate_signals() -> list[dict]:
     """早盘候选: 读 candidate_history 最近一次扫描 top5."""
-    conn = sqlite3.connect(str(cfg.SCREENER_DB))
-    conn.row_factory = sqlite3.Row
-    rows = conn.execute("""
-        SELECT code, name, score, sector FROM candidate_history
-        WHERE scan_date = (SELECT MAX(scan_date) FROM candidate_history)
-        ORDER BY score DESC LIMIT 5
-    """).fetchall()
-    conn.close()
+    try:
+        conn = sqlite3.connect(str(cfg.SCREENER_DB))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
+            SELECT code, name, score, sector FROM candidate_history
+            WHERE scan_date = (SELECT MAX(scan_date) FROM candidate_history)
+            ORDER BY score DESC LIMIT 5
+        """).fetchall()
+        conn.close()
+    except Exception:
+        return []
     return [{"code": r["code"], "name": r["name"] or "",
              "score": r["score"] or 0, "desc": f"{r['sector'] or ''} 候选"} for r in rows]
 
