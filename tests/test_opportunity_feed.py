@@ -89,3 +89,49 @@ def test_positions_empty_when_no_holdings(monkeypatch):
     from a_stock.web import positions_panel
     monkeypatch.setattr("a_stock.web.positions_panel._load_positions", lambda: [])
     assert positions_panel.collect_positions() == []
+
+
+def test_asset_bar_computes_totals(monkeypatch):
+    """资产条: 总资产=市值+现金, 距目标百分比."""
+    from a_stock.web import asset_bar
+    monkeypatch.setattr("a_stock.web.asset_bar._positions_total_mv", lambda: 24619)
+    monkeypatch.setattr("a_stock.web.asset_bar._total_unrealized", lambda: 303)
+    monkeypatch.setattr("a_stock.web.asset_bar._realized_today", lambda: 67)
+    a = asset_bar.collect_asset_bar(cash=55319)
+    assert a["total"] == 79938  # 24619+55319
+    assert a["stock_mv"] == 24619
+    assert a["cash"] == 55319
+    assert a["unrealized"] == 303
+    assert a["realized"] == 67
+    assert abs(a["target_pct"] - 79.9) < 0.5
+
+
+def test_asset_bar_target_pct(monkeypatch):
+    from a_stock.web import asset_bar
+    monkeypatch.setattr("a_stock.web.asset_bar._positions_total_mv", lambda: 0)
+    monkeypatch.setattr("a_stock.web.asset_bar._total_unrealized", lambda: 0)
+    monkeypatch.setattr("a_stock.web.asset_bar._realized_today", lambda: 0)
+    a = asset_bar.collect_asset_bar(cash=50000)
+    assert a["target_pct"] == 50.0
+
+
+def test_ticker_codes_from_holdings_and_watchlist(monkeypatch):
+    """ticker 代码 = 持仓 + watchlist + 候选."""
+    from a_stock.web import ticker
+    monkeypatch.setattr("a_stock.web.ticker._holding_codes", lambda: ["600276", "159801"])
+    monkeypatch.setattr("a_stock.web.ticker._watchlist_codes", lambda: ["159516"])
+    monkeypatch.setattr("a_stock.web.ticker._candidate_codes", lambda: ["000988"])
+    codes = ticker.collect_ticker_codes()
+    assert set(codes) == {"600276", "159801", "159516", "000988"}
+
+
+def test_sentiment_bar_returns_temp_and_mood(monkeypatch):
+    """情绪条: 温度+情绪+领涨."""
+    from a_stock.web import sentiment_bar
+    monkeypatch.setattr("a_stock.web.sentiment_bar._compute_temp",
+                        lambda: {"temp": 30.0, "mood": "谨慎"})
+    monkeypatch.setattr("a_stock.web.sentiment_bar._leading_sector", lambda: "农林牧渔")
+    s = sentiment_bar.collect_sentiment()
+    assert s["temp"] == 30.0
+    assert s["mood"] == "谨慎"
+    assert s["leader"] == "农林牧渔"
