@@ -68,3 +68,37 @@ def test_no_volume_data_does_not_crash():
         fs = technical_scorer.score("T_VOL5")
     assert "vol_breakout" not in fs.detail
     assert "vol_divergence" not in fs.detail
+
+
+# === 回踩买点 (MA10 + 多头排列) ===
+
+def test_pullback_to_ma5_in_uptrend_detected():
+    """多头排列 + 价回踩MA5(±1.5%)不破 → 标记回踩买点."""
+    # 构造多头上升序列, 共65日(够ma60), 末日小回调到MA5附近
+    base = [10.0 + i * 0.1 for i in range(65)]  # 10.0→16.4 上升
+    base[-1] = base[-2] * 0.995  # 末日微跌回踩
+    closes = base
+    vols = [1000] * 65
+    with _patch_load(_rows(closes, vols)):
+        fs = technical_scorer.score("T_PULL1")
+    assert fs.detail.get("pullback_buy") == "回踩MA5"
+
+
+def test_pullback_not_triggered_when_far_above_ma():
+    """价远离MA5(急拉) → 不标回踩买点."""
+    base = [10.0 + i * 0.1 for i in range(40)]
+    base[-1] = base[-2] * 1.08  # 末日急拉8%, 远离MA5
+    closes = base
+    vols = [1000] * 40
+    with _patch_load(_rows(closes, vols)):
+        fs = technical_scorer.score("T_PULL2")
+    assert "pullback_buy" not in fs.detail
+
+
+def test_pullback_not_triggered_in_downtrend():
+    """空头排列 → 不标回踩买点(无多头基础)."""
+    closes = [15.0 - i * 0.1 for i in range(40)]  # 下降
+    vols = [1000] * 40
+    with _patch_load(_rows(closes, vols)):
+        fs = technical_scorer.score("T_PULL3")
+    assert "pullback_buy" not in fs.detail
