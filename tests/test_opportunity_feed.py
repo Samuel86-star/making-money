@@ -63,3 +63,29 @@ def test_pullback_uses_real_scorer(tmp_path, monkeypatch):
     assert len(sigs) == 1
     assert sigs[0]["code"] == "T_REAL1"
     assert "MA5" in sigs[0]["ma"]
+
+
+def test_positions_with_cost_and_stop_loss(monkeypatch):
+    """持仓数据含 cost, stop_loss (ATR), pnl."""
+    from a_stock.web import positions_panel
+    monkeypatch.setattr("a_stock.web.positions_panel._load_positions",
+                        lambda: [{"code": "T_POS1", "name": "T持仓", "qty": 100,
+                                  "cost": 10.0, "price": 11.0,
+                                  "unrealized_pnl": 100.0, "mv": 1100.0}])
+    monkeypatch.setattr("a_stock.web.positions_panel._atr_stop",
+                        lambda code, cost: 9.5)
+    rows = positions_panel.collect_positions()
+    assert len(rows) == 1
+    r = rows[0]
+    assert r["code"] == "T_POS1"
+    assert r["cost"] == 10.0
+    assert r["price"] == 11.0
+    assert r["stop_loss"] == 9.5
+    assert r["pnl_pct"] == 10.0  # (11-10)/10*100
+
+
+def test_positions_empty_when_no_holdings(monkeypatch):
+    """无持仓 → 空列表."""
+    from a_stock.web import positions_panel
+    monkeypatch.setattr("a_stock.web.positions_panel._load_positions", lambda: [])
+    assert positions_panel.collect_positions() == []
