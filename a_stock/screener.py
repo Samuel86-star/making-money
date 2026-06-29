@@ -19,6 +19,17 @@ from a_stock.a_stock_data import (
 PUSH2_CLIST = "https://push2.eastmoney.com/api/qt/clist/get"
 
 
+def _num(v) -> float:
+    """东财 push2 对停牌/北交所等无数据字段返回 '-' 字符串, 强制转 float, 失败归 0。"""
+    try:
+        f = float(v)
+        if f != f or f in (float("inf"), float("-inf")):  # NaN/inf
+            return 0.0
+        return f
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def fetch_market_stocks(top_n: int = 200) -> list[dict]:
     """Step 2:push2 clist 全市场。"""
     import requests
@@ -41,14 +52,17 @@ def fetch_market_stocks(top_n: int = 200) -> list[dict]:
     d = r.json().get("data", {})
     out = []
     for row in d.get("diff", []):
+        code = row.get("f12", "")
+        if not code:  # 跳过空 code 脏行
+            continue
         out.append({
-            "code": row.get("f12", ""),
+            "code": code,
             "name": row.get("f14", ""),
-            "price": row.get("f2", 0) or 0,
-            "change_pct": row.get("f3", 0) or 0,
-            "net_flow": (row.get("f62") or 0) * 10000,  # 万→元
-            "inflow": (row.get("f66") or 0) * 10000,
-            "outflow": (row.get("f72") or 0) * 10000,
+            "price": _num(row.get("f2")),
+            "change_pct": _num(row.get("f3")),
+            "net_flow": _num(row.get("f62")) * 10000,  # 万→元
+            "inflow": _num(row.get("f66")) * 10000,
+            "outflow": _num(row.get("f72")) * 10000,
         })
     return out
 
