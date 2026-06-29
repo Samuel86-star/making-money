@@ -118,7 +118,7 @@ def score(code: str) -> FactorScore:
             if ma_val <= 0:
                 continue
             # 回踩: 价在MA±1.5%内, 且价>=MA(不破)
-            if abs(price - ma_val) / ma_val <= 0.015 and price >= ma_val * 0.998:
+            if ma_val * 0.998 <= price <= ma_val * 1.015:
                 detail["pullback_buy"] = f"回踩{ma_name}"
                 s += 8
                 break
