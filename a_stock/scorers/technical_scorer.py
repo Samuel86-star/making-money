@@ -73,6 +73,7 @@ def score(code: str) -> FactorScore:
     vols = [r.get("Volume") or r.get("volume") for r in rows
             if r.get("Volume") or r.get("volume")]
     ma5 = _sma(closes, 5)
+    ma10 = _sma(closes, 10)
     ma20 = _sma(closes, 20)
     ma60 = _sma(closes, 60)
     rsi = _rsi(closes)
@@ -82,7 +83,7 @@ def score(code: str) -> FactorScore:
     price_up = price > prev_close
 
     s = 50
-    detail = {"ma5": round(ma5, 2), "ma20": round(ma20, 2), "rsi": round(rsi, 1)}
+    detail = {"ma5": round(ma5, 2), "ma10": round(ma10, 2), "ma20": round(ma20, 2), "rsi": round(rsi, 1)}
 
     # 均线多头 (价>ma5>ma20>ma60)
     if price > ma5 > ma20 > ma60 and ma60 > 0:
@@ -110,6 +111,17 @@ def score(code: str) -> FactorScore:
     elif rsi > 70:
         s -= 10  # 超买
         detail["rsi_state"] = "超买"
+
+    # 回踩买点 (06-29铁律: 多头排列+回踩MA5/MA10不破=加仓信号)
+    if ma60 > 0 and price > ma20 > ma60:  # 多头基础
+        for ma_name, ma_val in [("MA5", ma5), ("MA10", ma10)]:
+            if ma_val <= 0:
+                continue
+            # 回踩: 价在MA±1.5%内, 且价>=MA(不破)
+            if ma_val * 0.998 <= price <= ma_val * 1.015:
+                detail["pullback_buy"] = f"回踩{ma_name}"
+                s += 8
+                break
 
     # 量价验证 (volume 历史未用, 06-29教训核心补强)
     # 量比 = 当日量 / 近20日均量

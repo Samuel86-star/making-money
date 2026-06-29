@@ -50,7 +50,14 @@ a_stock/
 ├── macro_calendar.py           宏观日历
 ├── rules.yaml                  11条监控规则
 ├── db.py                       DB schema + helpers
-└── config.py                   配置
+├── config.py                   配置
+├── web/                        盯盘Web UI (Streamlit交易终端)
+│   ├── dashboard.py            入口 (行情条+资产条+机会流+持仓栏+情绪)
+│   ├── opportunity_feed.py     4类机会聚合
+│   ├── positions_panel.py      持仓栏(成本+ATR止损)
+│   ├── asset_bar.py            资产条
+│   ├── ticker.py               行情滚动条
+│   └── sentiment_bar.py        情绪条
 ```
 
 ## cron 状态 (已安装) ## ✅
@@ -130,3 +137,4 @@ cd /Users/maerun/Projects/make-money
 - 2026-06-29 持仓变更: 600276 200→100, 159801 2000→200, 159915 2700→1000, 300059 300→100, 515650 不变13000.
 - 2026-06-29 CFO技能补课: 老板指示丰富金融/交易技能, 产出存 `docs/knowledge/` (01交易执行/02技术分析/03持仓管理与成本核算 + README铁律汇总). 3并行代理学习经典书目(海龟/作手回忆录/交易心理分析/蜡烛图/Murphy)+项目真实数据核对. 提炼铁律: ETF止损<2%是数学bug用ATR/结构位、减在急拉不减在回踩强势留底仓≥30%、不在09:30-10:00减仓、缩量破位=洗盘、报盈亏前必查db成本不瞎猜. 待落地7项增强见 docs/knowledge/README.md.
 - 2026-06-29 7项增强全部落地 (162 passed, 零回归): ①technical_scorer量价验证(vol_ratio: 放量突破+10/价升量缩-8/缩量洗盘+5/放量破位-10, 159516实测识别放量突破). ②log.py加`cost`子命令(查真实成本防瞎猜, 减仓后回写剩余成本). ③rules.yaml改159915为ATR结构止损4.04+2护栏(ETF浅止损/早盘急杀冷静), 共13规则. ④risk_metrics加成本基+unrealized_pnl+reduce标签校验(抓出今日2个错标). ⑤validate_state.py校验PROJECT_STATE成本列与db一致(修正东财20.07→21.279). ⑥ohlcv加atr()+struct_stop_loss(159915实测止损3.918今日未触印证教训). ⑦补拉159516 parquet.
+- 2026-06-29 Web盯盘UI上线: a_stock/web/ dashboard.py (Streamlit交易终端). 机会流4类(回踩买点/异动/候选/规则)+持仓侧栏+行情滚动条+情绪条. 复用现有模块实时算, A股涨红跌绿视觉. 启动: streamlit run a_stock/web/dashboard.py. +10测试 (175 passed).

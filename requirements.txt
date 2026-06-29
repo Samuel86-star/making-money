@@ -9,3 +9,4 @@ pandas>=3
 pyarrow>=24
 PyYAML>=6
 requests>=2
+streamlit>=1.30
