@@ -41,3 +41,4 @@ data/backup/
 data/.cache/
 data/holidays.json
 references/
+.superpowers/
