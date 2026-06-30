@@ -32,8 +32,10 @@ def cmd_buy(args):
         reason=args.reason, brief_snapshot_path=brief_path,
         plan_stop_loss=args.plan_stop_loss, plan_target=args.plan_target,
         plan_hold_days=args.plan_hold_days, plan_max_position_pct=args.plan_max_position_pct,
+        setup=args.setup,
     )
-    print(f"✓ 已记录 buy id={new_id}  brief={'已挂' if brief_path else '无'}")
+    print(f"✓ 已记录 buy id={new_id}  brief={'已挂' if brief_path else '无'}"
+          + (f"  setup={args.setup}" if args.setup else ""))
 
 
 def _interactive_buy(code: str, strategy: str, plan_max_pct: float | None):
@@ -55,6 +57,7 @@ def _interactive_buy(code: str, strategy: str, plan_max_pct: float | None):
     target = float(input(f"计划目标 [{price*1.10:.2f}]: ") or str(price * 1.10))
     hold = int(input("计划持有天数 [5]: ") or "5")
     max_pct = float(input(f"最大仓位 % [{plan_max_pct or 10}]: ") or str(plan_max_pct or 10))
+    setup = input("setup [pullback/breakout/anomaly/rule/vcp/other, 回车跳过]: ").strip() or None
 
     new_id = add_buy(
         code=code, strategy=strategy,
@@ -62,10 +65,12 @@ def _interactive_buy(code: str, strategy: str, plan_max_pct: float | None):
         reason=reason, brief_snapshot_path=brief_path,
         plan_stop_loss=stop, plan_target=target,
         plan_hold_days=hold, plan_max_position_pct=max_pct,
+        setup=setup,
     )
     print(f"\n✓ 已记录 buy id={new_id}")
     print(f"  strategy={strategy}  price={price}  qty={qty}")
     print(f"  plan: stop={stop} target={target} hold={hold}d max_pct={max_pct}%")
+    print(f"  setup: {setup or '未分类'}")
     print(f"  brief: {brief_path or '无'}")
 
 
@@ -73,8 +78,9 @@ def cmd_add(args):
     new_id = add_add(
         code=args.code, strategy=args.strategy,
         price=args.price, quantity=args.qty, reason=args.reason,
+        setup=args.setup,
     )
-    print(f"✓ 加仓 id={new_id}")
+    print(f"✓ 加仓 id={new_id}" + (f"  setup={args.setup}" if args.setup else ""))
 
 
 def cmd_close(args):
@@ -194,6 +200,8 @@ def main():
     p_buy.add_argument("--plan-target", type=float, dest="plan_target")
     p_buy.add_argument("--plan-hold", type=int, dest="plan_hold_days")
     p_buy.add_argument("--plan-max-pct", type=float, dest="plan_max_position_pct")
+    p_buy.add_argument("--setup", choices=["pullback", "breakout", "anomaly", "rule", "vcp", "other"],
+                       help="入场setup类型 (供expectancy by setup回测)")
     p_buy.set_defaults(func=cmd_buy)
 
     p_add = sub.add_parser("add")
@@ -202,6 +210,7 @@ def main():
     p_add.add_argument("--price", type=float, required=True)
     p_add.add_argument("--qty", type=int, required=True)
     p_add.add_argument("--reason")
+    p_add.add_argument("--setup", choices=["pullback", "breakout", "anomaly", "rule", "vcp", "other"])
     p_add.set_defaults(func=cmd_add)
 
     p_close = sub.add_parser("close")

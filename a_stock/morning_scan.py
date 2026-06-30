@@ -88,7 +88,6 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
     # 3. 按 (总分, 资金流) 排序, veto 的排除
     valid = [s for s in scored if not s.get("veto")]
     valid.sort(key=lambda x: (x["total"], x.get("net_flow_yi", 0)), reverse=True)
-    top = valid[:score_top]
 
     # 4. 板块轮动
     from a_stock.sector_rotation import analyze as sector_analyze
@@ -103,6 +102,26 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
             }
     except Exception as e:
         print(f"  ⚠ 板块轮动失败: {e}")
+
+    # 4b. 市场结构过滤 (audit 🟡4: SEVERE/HIGH市场只推中性及以下, 不追多)
+    market_level = "NORMAL"
+    try:
+        from a_stock.market_regime import regime
+        market_level = regime("159915")["level"]
+    except Exception:
+        pass
+    if market_level in ("HIGH", "SEVERE"):
+        before = len(valid)
+        # 白名单: 防御市场只留观望中性/偏弱可蹲 (不追偏多/重仓)
+        DEFENSIVE_LEVELS = ("观望中性", "偏弱可蹲")
+        valid = [s for s in valid if any(lv in s.get("level", "") for lv in DEFENSIVE_LEVELS)]
+        valid.sort(key=lambda x: (x["total"], x.get("net_flow_yi", 0)), reverse=True)
+        filtered_out = before - len(valid)
+        if filtered_out > 0:
+            print(f"  ⚠ 市场结构 {market_level}, 过滤追多股: {before}→{len(valid)} (滤除{filtered_out}只)")
+
+    # 4c. 切 top (4b过滤后再取)
+    top = valid[:score_top]
 
     # 5. 推送
     if top and not dry_run:

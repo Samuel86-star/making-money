@@ -186,7 +186,9 @@ def init_screener_db() -> None:
 def insert_decision(*, code, name=None, strategy, action, decision_date, price, quantity,
                     decision_time=None, reason=None, brief_snapshot_path=None,
                     plan_stop_loss=None, plan_target=None, plan_hold_days=None,
-                    plan_max_position_pct=None, parent_id=None) -> int:
+                    plan_max_position_pct=None, parent_id=None, setup=None) -> int:
+    # 确保setup列存在 (audit fix: log.py CLI路径不调init_decisions_db, 防fresh部署crash)
+    _migrate_setup_column()
     amount = price * quantity
     with conn(cfg.DECISIONS_DB) as c:
         cur = c.execute("""
@@ -194,12 +196,12 @@ def insert_decision(*, code, name=None, strategy, action, decision_date, price, 
             (code, name, strategy, action, decision_date, decision_time,
              price, quantity, amount,
              reason, brief_snapshot_path, plan_stop_loss, plan_target,
-             plan_hold_days, plan_max_position_pct, parent_id)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+             plan_hold_days, plan_max_position_pct, parent_id, setup)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (code, name, strategy, action, decision_date, decision_time,
               price, quantity, amount,
               reason, brief_snapshot_path, plan_stop_loss, plan_target,
-              plan_hold_days, plan_max_position_pct, parent_id))
+              plan_hold_days, plan_max_position_pct, parent_id, setup))
         return cur.lastrowid
 
 

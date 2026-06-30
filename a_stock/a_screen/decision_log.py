@@ -7,7 +7,7 @@ import a_stock.config as cfg
 def add_buy(*, code, strategy, price, quantity, name=None, reason=None,
             brief_snapshot_path=None,
             plan_stop_loss=None, plan_target=None, plan_hold_days=None,
-            plan_max_position_pct=None) -> int:
+            plan_max_position_pct=None, setup=None) -> int:
     if not name:
         # 简化:不查名称,留给前端展示
         name = code
@@ -20,15 +20,16 @@ def add_buy(*, code, strategy, price, quantity, name=None, reason=None,
         plan_stop_loss=plan_stop_loss, plan_target=plan_target,
         plan_hold_days=plan_hold_days,
         plan_max_position_pct=plan_max_position_pct,
+        setup=setup,
     )
 
 
-def add_add(*, code, strategy, price, quantity, reason=None) -> int:
+def add_add(*, code, strategy, price, quantity, reason=None, setup=None) -> int:
     return db.insert_decision(
         code=code, strategy=strategy, action="add",
         decision_date=datetime.now().strftime("%Y-%m-%d"),
         decision_time=datetime.now().strftime("%H:%M:%S"),
-        price=price, quantity=quantity, reason=reason,
+        price=price, quantity=quantity, reason=reason, setup=setup,
     )
 
 

@@ -114,6 +114,34 @@ def regime(code: str = "159915") -> dict:
             "dist_days": dd["days"], "ftd": ftd}
 
 
+# 择时信号优先级 (audit 🔴2: 信号打架定规则)
+# 市场结构为锚, 情绪为辅. 结构硬, 情绪软.
+# posture: offensive(进攻)/neutral(中性)/defensive(防御)
+POSTURE_RULES = [
+    # (market_level, sentiment_lo, sentiment_hi) → posture  (闭区间)
+    (("NORMAL",),    0, 100,  "offensive"),   # NORMAL 市场, 任何情绪 → 可进攻
+    (("CAUTION",),   0, 39,   "defensive"),   # CAUTION + 情绪冷(<40) → 防御
+    (("CAUTION",),   40, 100, "neutral"),     # CAUTION + 情绪暖(≥40) → 中性
+    (("HIGH",),      0, 100,  "defensive"),   # HIGH → 防御
+    (("SEVERE",),    0, 100,  "defensive"),   # SEVERE → 防御
+]
+
+
+def posture(market_level: str, sentiment_temp: float) -> dict:
+    """择时姿态: 综合市场结构(硬)+情绪(软) → offensive/neutral/defensive.
+
+    audit 🔴2 修: 三信号(sentiment/market_regime/实际涨幅)打架时定优先级.
+    规则: 市场结构为锚 (派发日累积是机构抛售, 硬信号), 情绪为辅.
+    NORMAL市场才允许进攻; CAUTION及以上 → 防御或中性, 不开新仓."""
+    for levels, lo, hi, pos in POSTURE_RULES:
+        if market_level in levels and lo <= sentiment_temp <= hi:
+            return {"posture": pos, "market_level": market_level,
+                    "sentiment": sentiment_temp, "rule": f"{market_level}+情绪{sentiment_temp:.0f}→{pos}"}
+    # fallback
+    return {"posture": "neutral", "market_level": market_level,
+            "sentiment": sentiment_temp, "rule": "fallback→中性"}
+
+
 def main():
     ap = argparse.ArgumentParser(description="市场结构识别 (派发日+FTD)")
     ap.add_argument("--code", default="159915", help="指数ETF代码 (默认159915创业板)")

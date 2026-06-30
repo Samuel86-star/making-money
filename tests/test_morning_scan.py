@@ -53,6 +53,10 @@ _INLINE_SCRIPT = textwrap.dedent("""
     import a_stock.sector_rotation as _sr
     _sr.analyze = lambda: None
 
+    # 市场结构: mock NORMAL (隔离, 避免real 159915 SEVERE触发过滤)
+    import a_stock.market_regime as _mr
+    _mr.regime = lambda code: {"level": "NORMAL", "dist_count": 0, "dist_days": [], "ftd": None}
+
     # 落盘到 tmp (避免污染 data/)
     ms.cfg.DAILY_DIR = __import__("pathlib").Path(tempfile.gettempdir())
 
