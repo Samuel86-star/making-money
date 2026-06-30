@@ -20,6 +20,29 @@ def _watched_codes() -> list[str]:
     return [r["code"] for r in rows]
 
 
+_FALLBACK_NAMES = {
+    "515650": "消费50ETF富国", "159801": "芯片ETF广发",
+    "159915": "创业板ETF易方达", "159516": "半导体材料设备ETF",
+    "600276": "恒瑞医药", "300059": "东方财富",
+    "515880": "通信ETF国泰",
+}
+
+
+def _resolve_name(code: str, name: str = "") -> str:
+    """标的名称回退: 调用方传入的name → watchlist.name → 内置FALLBACK → ''."""
+    if name:
+        return name
+    try:
+        conn = sqlite3.connect(str(cfg.DECISIONS_DB))
+        row = conn.execute("SELECT name FROM watchlist WHERE code=?", (code,)).fetchone()
+        conn.close()
+        if row and row[0]:
+            return row[0]
+    except Exception:
+        pass
+    return _FALLBACK_NAMES.get(code, "")
+
+
 def _holding_cost(code: str) -> float | None:
     """某标的真实成本 (移动加权, lot制剩余). 无持仓返回 None.
 
@@ -61,7 +84,7 @@ def _pullback_signals() -> list[dict]:
             continue
         px = _live_price(code) or 0.0
         out.append({
-            "code": code, "name": "", "ma": pb,
+            "code": code, "name": _resolve_name(code), "ma": pb,
             "price": px, "cost": _holding_cost(code) or 0.0,
         })
     return out
@@ -128,7 +151,7 @@ def _rule_signals() -> list[dict]:
         is_fired = (rule["name"], code) in fired_keys
         current_px = _live_price(code) or 0.0
         out.append({
-            "code": code, "name": "", "desc": rule.get("note", ""),
+            "code": code, "name": _resolve_name(code), "desc": rule.get("note", ""),
             "trigger_price": rule.get("condition", {}).get("value"),
             "current": current_px, "fired": is_fired,
         })
@@ -142,7 +165,7 @@ def collect_opportunities() -> list[dict]:
         opps.append({
             "type": "pullback", "time": datetime.now().strftime("%H:%M"),
             "code": s["code"], "name": s["name"] or s["code"],
-            "desc": f"多头排列 + 回踩{s['ma']}不破 → 加仓信号",
+            "desc": f"多头排列 + {s['ma']}不破 → 加仓信号",
             "meta": f"现{s['price']:.3f} · 成本{s['cost']:.3f}",
             "tag": "📍 回踩买点", "action_label": "加仓",
         })
