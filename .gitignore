@@ -40,6 +40,6 @@ data/logs/
 data/backup/
 data/.cache/
 data/holidays.json
-references/
+/references/
 .superpowers/
 data/mfe_mae_state.json
