@@ -237,6 +237,15 @@ def _run_impl(dry_run: bool) -> dict:
                 port_prev += p["prev_close"] * h["qty"]
         portfolio_change = (port_value - port_prev) / port_prev * 100 if port_prev else 0
 
+        # MFE/MAE 持仓过程极值追踪 (docs/references/trading-skills-methodology.md 第2条)
+        # 每 tick 用现价更新, 攒样本验证止损宽度 (假设[D]). 容错不阻塞主流程.
+        try:
+            from a_stock.mfe_mae import update as _mfe_update
+            _mfe_update({c: prices[c]["price"] for c in prices
+                        if c in {h["code"] for h in holdings}})
+        except Exception as e:
+            _log_error("monitor", "mfe_mae_update", e)
+
         fired = []
         for rule in rules:
             if not rule.get("active", True):

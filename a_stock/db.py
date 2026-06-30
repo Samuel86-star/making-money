@@ -159,10 +159,23 @@ def _migrate_decisions_v2() -> None:
         """)
 
 
+def _migrate_setup_column() -> None:
+    """Idempotent migration: add `setup` TEXT column to decisions.
+
+    setup = 入场setup类型 (pullback/breakout/anomaly/rule/...), 供 expectancy by setup
+    (docs/references/trading-skills-methodology.md 第3条). 旧行 setup=NULL = 未分类."""
+    with conn(cfg.DECISIONS_DB) as c:
+        cols = {row[1] for row in c.execute("PRAGMA table_info(decisions)").fetchall()}
+        if "setup" in cols:
+            return
+        c.execute("ALTER TABLE decisions ADD COLUMN setup TEXT")
+
+
 def init_decisions_db() -> None:
     with conn(cfg.DECISIONS_DB) as c:
         c.executescript(DECISIONS_SCHEMA)
     _migrate_decisions_v2()
+    _migrate_setup_column()
 
 
 def init_screener_db() -> None:

@@ -169,6 +169,55 @@ def _load_positions() -> list[dict]:
     return out
 
 
+def _stop_for(code: str, cost: float, name: str) -> float | None:
+    """取某标的止损价: 优先 db plan_stop_loss, 缺则 ATR 结构止损.
+
+    docs/references/trading-skills-methodology.md 第1条 Portfolio Heat 用."""
+    from a_stock.db import conn as _db_conn
+    with _db_conn(cfg.DECISIONS_DB) as c:
+        row = c.execute(
+            "SELECT MIN(plan_stop_loss) AS s FROM decisions "
+            "WHERE code=? AND action IN ('buy','add') AND close_date IS NULL "
+            "AND plan_stop_loss IS NOT NULL", (code,)
+        ).fetchone()
+    if row and row["s"]:
+        return float(row["s"])
+    # fallback: ATR 结构止损
+    try:
+        from a_stock.ohlcv import atr, struct_stop_loss
+        a = atr(code)
+        return struct_stop_loss(cost, a) if a else cost * 0.97
+    except Exception:
+        return cost * 0.97  # 默认3%止损
+
+
+def portfolio_heat(positions: list[dict], total: float, limit_pct: float = 6.0) -> dict:
+    """组合总风险敞口 = Σ (成本-止损)×持仓量. (Portfolio Heat)
+
+    借鉴 position-sizer/exposure-coach (docs/references/trading-skills-methodology.md 第1条).
+    不是单仓%, 是全部未平仓位的总下行风险. 超 limit_pct%(默认6%) → breach.
+    保护100k下行: 量化"若全触及止损总亏多少"."""
+    if not positions or total <= 0:
+        return {"heat": 0.0, "heat_pct": 0.0, "breach": False, "by_position": [], "limit_pct": limit_pct}
+    by_pos = []
+    heat = 0.0
+    for p in positions:
+        cost = p.get("cost", 0)
+        stop = _stop_for(p["code"], cost, p.get("name", ""))
+        if stop is None or stop >= cost:
+            risk_per_share = 0.0
+        else:
+            risk_per_share = cost - stop
+        risk = risk_per_share * p["qty"]
+        heat += risk
+        by_pos.append({"code": p["code"], "qty": p["qty"], "cost": round(cost, 4),
+                       "stop": round(stop, 4) if stop else None,
+                       "risk": round(risk)})
+    heat_pct = round(heat / total * 100, 2)
+    return {"heat": round(heat), "heat_pct": heat_pct,
+            "breach": heat_pct > limit_pct, "by_position": by_pos, "limit_pct": limit_pct}
+
+
 def check_reduce_label_consistency() -> list[dict]:
     """校验 reduce 标签与 pnl 符号一致 (06-29教训: partial_take_profit 不应 pnl<0).
 
@@ -339,6 +388,17 @@ def main():
         sc = sector_concentration(positions)
         for sec, pct in sorted(sc.items(), key=lambda x: -x[1]):
             print(f"  {sec:<6} {pct:>6.1f}%")
+
+    # Portfolio Heat (组合总风险敞口, docs/references 第1条)
+    if positions:
+        print("\n=== Portfolio Heat (总风险敞口) ===")
+        ph = portfolio_heat(positions, r["total"])
+        print(f"  总风险: {ph['heat']:,} 元 ({ph['heat_pct']:.2f}%, 上限{ph['limit_pct']:.0f}%)")
+        for bp in ph["by_position"]:
+            stop_s = f"{bp['stop']:.3f}" if bp["stop"] else "无"
+            print(f"    {bp['code']:<8} 持{bp['qty']:<6} 成本{bp['cost']:<8} 止损{stop_s:<8} 风险{bp['risk']:>6,}")
+        if ph["breach"]:
+            print(f"  ⚠️  Heat {ph['heat_pct']:.1f}% > {ph['limit_pct']:.0f}% 上限, 减仓降风险")
 
     # 压力测试
     if positions:

@@ -42,3 +42,4 @@ data/.cache/
 data/holidays.json
 references/
 .superpowers/
+data/mfe_mae_state.json

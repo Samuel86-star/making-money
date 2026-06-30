@@ -59,6 +59,17 @@ def run(dry_run: bool = False) -> dict:
     except Exception as e:
         result["sentiment_error"] = str(e)
 
+    # 2b. 市场结构 (派发日+FTD, docs/references 第4条) — 比情绪温度硬
+    regime_data = None
+    try:
+        from a_stock.market_regime import regime
+        reg = regime("159915")
+        regime_data = {"level": reg["level"], "dist_count": reg["dist_count"],
+                       "ftd": reg["ftd"]}
+        result["regime"] = regime_data
+    except Exception as e:
+        result["regime_error"] = str(e)
+
     # 3. 持仓评分快照
     candidates = []
     try:
@@ -91,6 +102,8 @@ def run(dry_run: bool = False) -> dict:
             body_parts.append(f"板块:{sector_data['verdict']}")
         if result.get("sentiment"):
             body_parts.append(f"情绪:{result['sentiment']['temp']}({result['sentiment']['mood']})")
+        if regime_data:
+            body_parts.append(f"市场结构:{regime_data['level']}(派发{regime_data['dist_count']})")
         if candidates:
             top = sorted(candidates, key=lambda x: x["total"], reverse=True)[:3]
             body_parts.append("top3: " + " ".join(f"{c['name']}{c['total']}" for c in top))
@@ -109,6 +122,10 @@ def main():
         print(f"板块: {r['sector']['verdict']} 领涨{r['sector']['current_leader']}")
     if r.get("sentiment"):
         print(f"情绪: {r['sentiment']['temp']} ({r['sentiment']['mood']})")
+    if r.get("regime"):
+        rg = r["regime"]
+        ftd_s = f" FTD:{rg['ftd']['date']}" if rg.get("ftd") else ""
+        print(f"市场结构: {rg['level']} (派发日{rg['dist_count']}{ftd_s})")
     if r.get("candidates"):
         print(f"持仓评分 top:")
         for c in sorted(r["candidates"], key=lambda x: x["total"], reverse=True)[:5]:

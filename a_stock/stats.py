@@ -36,6 +36,43 @@ def compute_overall(window_days: int | None = None) -> dict:
     }
 
 
+def expectancy(setup: str | None = None, window_days: int | None = None) -> dict:
+    """按setup分类算期望值 (docs/references/trading-skills-methodology.md 第3条).
+
+    expectancy_pct = win_rate×avg_win − loss_rate×avg_loss.
+    setup=None 时按 setup 分组返回全部; setup指定时返回该setup聚合."""
+    rows = _closed_in_window(window_days)
+    # 只取 reduce (有pnl_pct)
+    rows = [r for r in rows if r["action"] == "reduce" and r["pnl_pct"] is not None]
+    if setup:
+        rows = [r for r in rows if (r["setup"] if "setup" in r.keys() else None) == setup]
+        return _expectancy_agg(rows, setup)
+    # 按 setup 分组 (NULL→未分类)
+    groups: dict[str, list] = {}
+    for r in rows:
+        key = (r["setup"] if "setup" in r.keys() else None) or "未分类"
+        groups.setdefault(key, []).append(r)
+    return {k: _expectancy_agg(v, k) for k, v in groups.items()}
+
+
+def _expectancy_agg(rows: list, label: str) -> dict:
+    if not rows:
+        return {"setup": label, "n": 0, "wins": 0, "losses": 0, "win_rate": 0,
+                "avg_win": 0, "avg_loss": 0, "expectancy_pct": 0}
+    wins = [r["pnl_pct"] for r in rows if r["pnl_pct"] > 0]
+    losses = [r["pnl_pct"] for r in rows if r["pnl_pct"] <= 0]
+    n = len(rows)
+    w = len(wins)
+    l = len(losses)
+    avg_win = sum(wins) / w if w else 0
+    avg_loss = sum(abs(x) for x in losses) / l if l else 0  # 亏损取绝对值
+    win_rate = w / n
+    exp = win_rate * avg_win - (1 - win_rate) * avg_loss
+    return {"setup": label, "n": n, "wins": w, "losses": l,
+            "win_rate": round(win_rate, 4), "avg_win": round(avg_win, 2),
+            "avg_loss": round(avg_loss, 2), "expectancy_pct": round(exp, 2)}
+
+
 def compute_by_strategy(strategy: str, window_days: int | None = None) -> dict:
     rows = [r for r in _closed_in_window(window_days) if r["strategy"] == strategy]
     return _agg(rows)

@@ -65,11 +65,14 @@ a_stock/
 ### 关键入口
 ```bash
 .venv/bin/python -m a_stock.goal_sim         # 蒙特卡洛
-.venv/bin/python -m a_stock.risk_metrics     # 组合风险
-.venv/bin/python -m a_stock.monitor --dry-run # 监控dry-run
+.venv/bin/python -m a_stock.risk_metrics     # 组合风险 (含Portfolio Heat总风险敞口)
+.venv/bin/python -m a_stock.monitor --dry-run # 监控dry-run (5min tick含MFE/MAE更新)
 .venv/bin/python -m a_stock.log add 515650 --strategy mid --price 0.95 --qty 7000
 .venv/bin/python -m a_stock.scheduler session # 交易时段
 .venv/bin/python -m a_stock.sentiment        # 情绪温度
+.venv/bin/python -m a_stock.market_regime    # 市场结构 (派发日+FTD, 风险等级)
+.venv/bin/python -m a_stock.mfe_mae --update # MFE/MAE持仓过程极值
+.venv/bin/python -m a_stock.backtest_hypothesis --setup pullback  # 假设回测
 .venv/bin/python -m a_stock.deep_research 600276 --json  # 深研
 ./a_stock/setup_cron.sh install              # 装cron
 ```

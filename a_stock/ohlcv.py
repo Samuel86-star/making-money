@@ -61,3 +61,48 @@ def struct_stop_loss(entry: float, atr_val: float | None,
     atr_term = (2 * atr_val) if atr_val and atr_val > 0 else 0.0
     drop = max(entry * pct_floor, atr_term)
     return entry - drop
+
+
+def vcp_score(code: str, n_waves: int = 4, lookback: int = 60) -> float:
+    """VCP (Volatility Contraction Pattern) 形态就绪度评分, 0-100.
+
+    Minervini VCP: 洗盘时波动越缩越紧 + 量缩 → 突破在即.
+    方法 (docs/references/trading-skills-methodology.md 第5条):
+    取近 lookback 日, 等分 n_waves 段, 每段算波动幅度 (high-low)/mean.
+    收缩 = 后段波动 < 前段. 量缩 = 末段均量 < 首段.
+    Score = 收缩比例×60 + 量缩信号×40.
+
+    无数据/数据不足返回 0."""
+    try:
+        df = load_ohlcv(code)
+    except FileNotFoundError:
+        return 0.0
+    if df is None or len(df) < n_waves * 3:
+        return 0.0
+    df = df.tail(lookback).reset_index(drop=True)
+    seg = len(df) // n_waves
+    if seg < 2:
+        return 0.0
+    highs = df["high"].astype(float)
+    lows = df["low"].astype(float)
+    closes = df["close"].astype(float)
+    vols = df["volume"].astype(float)
+
+    seg_vols = []  # 每段波动幅度
+    seg_quant = []  # 每段均量
+    for i in range(n_waves):
+        s, e = i * seg, (i + 1) * seg if i < n_waves - 1 else len(df)
+        hi = highs.iloc[s:e].max()
+        lo = lows.iloc[s:e].min()
+        mean_c = closes.iloc[s:e].mean() or 1.0
+        seg_vols.append((hi - lo) / mean_c)
+        seg_quant.append(vols.iloc[s:e].mean())
+
+    # 收缩: 后段 < 前段 的次数
+    contractions = sum(1 for i in range(1, n_waves) if seg_vols[i] < seg_vols[i - 1])
+    contraction_ratio = contractions / (n_waves - 1)
+    # 量缩: 末段 < 首段
+    vol_shrink = 1.0 if seg_quant[-1] < seg_quant[0] else 0.0
+
+    score = contraction_ratio * 60 + vol_shrink * 40
+    return round(score, 1)
