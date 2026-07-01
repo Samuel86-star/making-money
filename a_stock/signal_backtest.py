@@ -20,10 +20,18 @@ import a_stock.config as cfg
 
 def backtest_signal(signal_fn, closes: list, vols: list,
                     forward_days: tuple = (5, 10, 20),
-                    min_history: int = 60) -> dict:
+                    min_history: int = 60,
+                    stop_pct: float | None = None,
+                    highs: list | None = None, lows: list | None = None) -> dict:
     """单股滑动回测. 对每个 T (min_history ≤ T < n-max_N), 跑 signal_fn(closes[:T+1], vols[:T+1]).
-    命中 (返回真值) 则记 forward return = (close[T+N]-close[T])/close[T].
-    返回 {N: [forward_returns]} 原始列表. signal_fn 异常当未命中."""
+    命中 (返回真值) 则记 forward return.
+
+    stop_pct=None: forward return = (close[T+N]-close[T])/close[T] (满horizon不止损).
+    stop_pct=0.03: 任意日 T+1..T+N 的 low ≤ entry×(1-3%) → 止损出场 return=-3%;
+                   否则持有到 close[T+N]. 需 highs/lows, 缺则回退无止损模式.
+
+    返回 {N: [returns]} 原始列表. signal_fn 异常当未命中."""
+    use_stop = stop_pct is not None and highs and lows
     results = {N: [] for N in forward_days}
     n = len(closes)
     max_N = max(forward_days)
@@ -35,10 +43,35 @@ def backtest_signal(signal_fn, closes: list, vols: list,
         if not fired:
             continue
         entry = closes[T]
+        if entry <= 0:
+            continue
         for N in forward_days:
-            if entry > 0 and T + N < n:
+            if use_stop:
+                h_fwd = highs[T + 1:T + 1 + N]
+                l_fwd = lows[T + 1:T + 1 + N]
+                c_fwd = closes[T + 1:T + 1 + N]
+                ret = realized_return_with_stop(entry, h_fwd, l_fwd, c_fwd, stop_pct, N)
+                if ret is not None:
+                    results[N].append(ret)
+            elif T + N < n:
                 results[N].append((closes[T + N] - entry) / entry)
     return results
+
+
+def realized_return_with_stop(entry: float, highs_fwd: list, lows_fwd: list,
+                              closes_fwd: list, stop_pct: float, N: int) -> float | None:
+    """带止损的forward收益. *_fwd = T+1..T+N 的 High/Low/Close.
+    任意日 low ≤ entry×(1-stop_pct) → 止损, return=-stop_pct (用low判, 日内触发).
+    否则 return = (closes_fwd[N-1]-entry)/entry. 数据不足N日返回None."""
+    if entry <= 0 or N <= 0:
+        return None
+    if len(lows_fwd) < N or len(closes_fwd) < N:
+        return None
+    stop_price = entry * (1 - stop_pct)
+    for i in range(N):
+        if lows_fwd[i] <= stop_price:
+            return -stop_pct  # 止损出场 (保守: 按stop价, 不按实际low)
+    return (closes_fwd[N - 1] - entry) / entry
 
 
 def aggregate_stats(per_stock: list, forward_days: tuple) -> dict:
@@ -117,29 +150,36 @@ SIGNALS = {
 
 
 def _load_parquet(code: str):
-    """加载单只 parquet → (closes, vols). 失败返回 None."""
+    """加载单只 parquet → (closes, vols, highs, lows). 失败返回 None."""
     f = cfg.OHLCV_DIR / f"{code}.parquet"
     if not f.exists():
         return None
     try:
         import pandas as pd
         df = pd.read_parquet(f)
-        ccol = "close" if "close" in df.columns else "Close"
-        vcol = "volume" if "volume" in df.columns else "Volume"
-        closes = df[ccol].astype(float).tolist()
-        vols = df[vcol].astype(float).tolist() if vcol in df.columns else [0.0] * len(closes)
-        return closes, vols
+        def _col(*names):
+            for nm in names:
+                if nm in df.columns:
+                    return df[nm].astype(float).tolist()
+            return []
+        closes = _col("close", "Close")
+        vols = _col("volume", "Volume") or [0.0] * len(closes)
+        highs = _col("high", "High")
+        lows = _col("low", "Low")
+        return closes, vols, highs, lows
     except Exception:
         return None
 
 
-def run_all(forward_days=(5, 10, 20), min_history=80, sample=None) -> dict:
-    """全市场回测所有信号. sample=N 只取前N只 (调试). 返回 {signal: {N: stats}} + base_rate."""
+def run_all(forward_days=(5, 10, 20), min_history=80, sample=None,
+            stop_pct=None) -> dict:
+    """全市场回测所有信号. stop_pct=0.03 启用止损建模 (需High/Low).
+    返回 {signal: {N: stats}} + base_rate."""
     codes = [p.stem for p in cfg.OHLCV_DIR.glob("*.parquet")]
     if sample:
         codes = codes[:sample]
-    print(f"⏳ 回测 {len(codes)} 只, {len(SIGNALS)} 信号, horizon={forward_days}")
-    # 预加载 (避免每个信号重读 parquet)
+    mode = f"止损{stop_pct:.0%}" if stop_pct else "无止损(满horizon)"
+    print(f"⏳ 回测 {len(codes)} 只, {len(SIGNALS)} 信号, horizon={forward_days}, {mode}")
     loaded = []
     for code in codes:
         d = _load_parquet(code)
@@ -150,18 +190,19 @@ def run_all(forward_days=(5, 10, 20), min_history=80, sample=None) -> dict:
     out = {}
     for name, fn in SIGNALS.items():
         per_stock = []
-        for code, (closes, vols) in loaded:
-            per_stock.append(backtest_signal(fn, closes, vols, forward_days, min_history))
+        for code, (closes, vols, highs, lows) in loaded:
+            per_stock.append(backtest_signal(fn, closes, vols, forward_days, min_history,
+                                             stop_pct=stop_pct, highs=highs, lows=lows))
         stats = aggregate_stats(per_stock, forward_days)
         out[name] = stats
-        # 简报
         s5 = stats.get(5) or {}
         print(f"  {name}: n={s5.get('count', 0)} 胜率={s5.get('win_rate', 0):.1%} "
               f"5日均={s5.get('avg_return', 0):+.2%}")
 
-    # base rate (用全样本 always-true)
-    br_per = [backtest_signal(lambda c, v: True, c, v, forward_days, min_history)
-              for _, (c, v) in loaded]
+    # base rate (always-true, 同stop模式)
+    br_per = [backtest_signal(lambda c, v: True, c, v, forward_days, min_history,
+                              stop_pct=stop_pct, highs=h, lows=lw)
+              for _, (c, v, h, lw) in loaded]
     br = aggregate_stats(br_per, forward_days)
     out["__base_rate__"] = br
     return out
@@ -172,13 +213,17 @@ def main():
     ap.add_argument("--horizon", type=int, nargs="+", default=[5, 10, 20])
     ap.add_argument("--min-history", type=int, default=80)
     ap.add_argument("--sample", type=int, default=None, help="只取前N只 (调试)")
+    ap.add_argument("--stop", type=float, default=None, help="止损% (如3=3%%), 启用止损建模")
     args = ap.parse_args()
 
     fwd = tuple(args.horizon)
-    out = run_all(forward_days=fwd, min_history=args.min_history, sample=args.sample)
+    stop = args.stop / 100 if args.stop else None
+    out = run_all(forward_days=fwd, min_history=args.min_history, sample=args.sample,
+                  stop_pct=stop)
     br = out.pop("__base_rate__")
 
-    print(f"\n=== 历史信号回测 (base rate: "
+    mode = f"止损{args.stop}%" if stop else "无止损"
+    print(f"\n=== 历史信号回测 [{mode}] (base rate: "
           + ", ".join(f"{N}日均={br[N]['avg_return']:+.2%}/胜率{br[N]['win_rate']:.1%}"
                       for N in fwd if br.get(N)) + ") ===\n")
     print(f"{'信号':<22} {'horizon':>7} {'n':>7} {'胜率':>7} {'信号均值':>9} {'base':>8} {'edge':>8} {'中位':>8}")
@@ -193,13 +238,13 @@ def main():
                   f"{s['avg_return']:>+8.2%} {b.get('avg_return', 0):>+7.2%} "
                   f"{e:>+7.2%} {s['median']:>+7.2%}")
 
-    # 落盘
     out_dir = cfg.DAILY_DIR / date.today().isoformat()
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / "signal_backtest.json"
-    json.dump({"signals": out, "base_rate": br,
+    tag = f"_stop{args.stop}" if stop else ""
+    out_file = out_dir / f"signal_backtest{tag}.json"
+    json.dump({"signals": out, "base_rate": br, "mode": mode,
                "horizon": list(fwd), "min_history": args.min_history,
-               "run_at": date.today().isoformat()},
+               "stop_pct": stop, "run_at": date.today().isoformat()},
               open(out_file, "w"), ensure_ascii=False, indent=2)
     print(f"\n✓ 落盘 {out_file}")
 

@@ -106,3 +106,67 @@ def test_edge_signal_vs_base():
     br_avg = br[5]["avg_return"]
     e = edge(sig_avg, br_avg)
     assert isinstance(e, float)
+
+
+# === 止损建模 (突破型信号median负, 实战有止损, 满horizon不止损=低估) ===
+
+from a_stock.signal_backtest import realized_return_with_stop, backtest_signal as _bs
+
+
+def test_stop_triggered_caps_loss():
+    """任意日low触止损 → return=-stop_pct (封顶亏损)."""
+    entry = 10.0
+    highs = [10.5, 9.8, 10.2, 10.3, 10.4]
+    lows =  [10.0, 9.5, 10.0, 10.1, 10.2]   # day2(索引1) low9.5<9.7
+    closes = [10.3, 9.6, 10.1, 10.2, 10.3]
+    r = realized_return_with_stop(entry, highs, lows, closes, stop_pct=0.03, N=5)
+    assert abs(r - (-0.03)) < 1e-9
+
+
+def test_stop_not_triggered_holds_to_horizon():
+    """未触止损 → 持有到N日收盘的forward return."""
+    entry = 10.0
+    highs = [10.5]*5
+    lows =  [9.9]*5   # 全程 > 9.7 不触发
+    closes = [10.1, 10.2, 10.3, 10.4, 10.5]
+    r = realized_return_with_stop(entry, highs, lows, closes, stop_pct=0.03, N=5)
+    assert abs(r - 0.05) < 1e-9
+
+
+def test_stop_uses_low_not_close():
+    """日内low触止损, 即使收盘回升 → 仍止损出场 (用low判)."""
+    entry = 10.0
+    highs = [10.5, 10.0, 10.5, 10.5, 10.5]
+    lows =  [10.0, 9.6, 9.9, 9.9, 9.9]   # day2 low9.6<9.7 触发
+    closes = [10.3, 10.2, 10.5, 10.5, 10.5]
+    r = realized_return_with_stop(entry, highs, lows, closes, stop_pct=0.03, N=5)
+    assert abs(r - (-0.03)) < 1e-9
+
+
+def test_stop_insufficient_data_returns_none():
+    """forward数据不足N日 → None (跳过)."""
+    r = realized_return_with_stop(10.0, [10.5]*2, [9.9]*2, [10.1]*2, 0.03, N=5)
+    assert r is None
+
+
+def test_backtest_with_stop_changes_results():
+    """带stop_pct 与 不带stop 结果不同 (止损路径生效)."""
+    closes = [10.0]*5 + [10.5, 11.0, 9.0, 8.0, 7.0]  # T=4 entry10, 后续急跌
+    highs =  [10.0]*5 + [10.6, 11.1, 9.2, 8.2, 7.2]
+    lows =   [10.0]*5 + [10.4, 10.9, 8.9, 7.9, 6.9]
+    vols = [1000]*10
+    r_nostop = _bs(lambda c, v: True, closes, vols, forward_days=(5,), min_history=4)
+    r_stop = _bs(lambda c, v: True, closes, vols, forward_days=(5,), min_history=4,
+                 stop_pct=0.03, highs=highs, lows=lows)
+    assert r_nostop[5] and r_stop[5]
+    assert r_stop[5][0] == -0.03       # 止损封顶 -3%
+    assert r_nostop[5][0] < -0.03      # 无止损更惨
+
+
+def test_backtest_stop_without_highlow_falls_back():
+    """stop_pct给但highs/lows缺 → 回退无止损模式 (不崩)."""
+    closes = [10.0]*10
+    r = _bs(lambda c, v: True, closes, [1000]*10, forward_days=(5,),
+            min_history=4, stop_pct=0.03)
+    assert len(r[5]) > 0
+
