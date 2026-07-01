@@ -156,12 +156,17 @@ def eastmoney_fund_flow_minute(code: str) -> list[dict]:
 FFLOW_DAY_URL = "https://push2.eastmoney.com/api/qt/stock/fflow/kline/get"
 
 def stock_fund_flow_120d(code: str) -> list[dict]:
-    """日级 120 日资金流,返回 [{"date": "YYYY-MM-DD", "main": x, "large": y, "small": z}]。"""
+    """日级 120 日资金流. 字段 f1-f7 (东财 fflow daykline 标准映射):
+
+    [{"date","main"(主力=超大+大),"super"(超大单),"big"(大单),"medium"(中单),"small"(小单),"main_pct"}]
+    main 字段向后兼容 (screener/moneyflow_scorer 用). super/big 供个股资金流细化.
+    注: 字段语义待交易日自检 (main ≈ super+big), 见 test_moneyflow_scorer 一致性测试.
+    """
     secid_map = {"sh": "1.", "sz": "0.", "bj": "0."}
     secid = secid_map[get_prefix(code)] + code
 
     params = {
-        "fields": "f1,f2,f3,f7",
+        "fields": "f1,f2,f3,f4,f5,f6,f7",
         "secid": secid,
         "klt": "101",   # 101 = daily K-line
         "lmt": "120",   # 120 records
@@ -175,12 +180,22 @@ def stock_fund_flow_120d(code: str) -> list[dict]:
             parts = k.split(",")
             if len(parts) < 4:
                 continue
-            out.append({
-                "date":   parts[0],
-                "main":   float(parts[1] or 0),
-                "large":  float(parts[2] or 0),
-                "small":  float(parts[3] or 0),
-            })
+            row = {"date": parts[0], "main": float(parts[1] or 0)}
+            # 细分字段 (旧数据可能只有4列, 防御性解析)
+            if len(parts) >= 7:
+                row["super"] = float(parts[5] or 0)     # f6 超大单
+                row["big"] = float(parts[4] or 0)       # f5 大单
+                row["medium"] = float(parts[3] or 0)    # f4 中单
+                row["small"] = float(parts[2] or 0)     # f3 小单
+                row["main_pct"] = float(parts[6] or 0)  # f7 主力占比
+            else:
+                # 兼容旧的 f1,f2,f3,f7 格式 (已弃用, 保留防回退)
+                row["super"] = 0.0
+                row["big"] = 0.0
+                row["medium"] = 0.0
+                row["small"] = 0.0
+                row["main_pct"] = 0.0
+            out.append(row)
         return out
     except Exception:
         return []
