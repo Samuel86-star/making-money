@@ -26,6 +26,16 @@
 
 ## B. 代码增强类 (待开发)
 
+### 🔴 行业资金流每日必看 (盘前/盘中/盘后)
+- 现状: `a_stock_data/sectors.industry_comparison()` 已能拉100行业涨跌+净流, 但**未接入 close_scan/daily.md/盯盘**, 复盘和盘中没用上
+- 待做:
+  1. close_scan 落盘行业资金流 TOP流入/TOP流出
+  2. daily.md 复盘必看"行业资金流"段 (流入/流出TOP10 + 对持仓含义)
+  3. 盯盘循环加入"持仓所在行业资金流"提醒 (持仓4: 东财=非银/恒瑞=医药/芯片半导体/创业板含硬件)
+  4. 修 `sectors.py` net_flow 单位口径 (现 `f62*10000` 导致显示百万亿, 实际净流亿 = net_flow/1e12)
+- 价值: **关键** — 07-01上午实战验证: 科技硬件(电子-212亿/通信-117亿/半导体-34亿)"涨却巨量流出"=出货, 而金融软件化工医药流入. 不看资金流会被"涨"骗, 看了能识别风格切换+个股风险
+- 落点: close_scan.py + daily.md 流程 + sectors.py 单位修复
+
 ### 🔴 posture 自动驱动仓位 (audit残留)
 - 现状: `market_regime.posture()` 是函数, 未自动输出
 - 待做: monitor/close_scan 输出 posture 提醒 (offensive/neutral/defensive)
