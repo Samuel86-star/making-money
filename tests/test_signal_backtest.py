@@ -170,3 +170,61 @@ def test_backtest_stop_without_highlow_falls_back():
             min_history=4, stop_pct=0.03)
     assert len(r[5]) > 0
 
+
+# === 信号 confluence (多信号同日触发是否edge更高) ===
+
+from a_stock.signal_backtest import confluence_backtest, aggregate_confluence
+
+
+def test_confluence_buckets_by_count():
+    """2信号在T都fire → bucket[2]记该T的forward return."""
+    closes = [10.0]*6 + [12.0]*14  # T=5 entry10, T+5=12 → +20%
+    vols = [1000]*20
+    sigs = [lambda c, v: c[-1] == 10, lambda c, v: c[-1] == 10]
+    b = confluence_backtest(sigs, closes, vols, forward_days=(5,), min_history=5)
+    # T=5 两信号fire (T<5 min_history挡, T>5 close变12不fire)
+    assert 2 in b
+    assert b[2][5] == [0.2]
+
+
+def test_confluence_single_signal_bucket_1():
+    """1信号fire, 另一不fire → bucket[1]."""
+    closes = [10.0]*6 + [12.0]*14
+    sigs = [lambda c, v: c[-1] == 10, lambda c, v: False]
+    b = confluence_backtest(sigs, closes, [1000]*20, forward_days=(5,), min_history=5)
+    assert 1 in b and b[1][5] == [0.2]
+    assert 2 not in b
+
+
+def test_confluence_zero_signals_skipped():
+    """无信号fire → 不入桶."""
+    closes = [10.0]*20
+    sigs = [lambda c, v: False]
+    b = confluence_backtest(sigs, closes, [1000]*20, forward_days=(5,), min_history=5)
+    assert b == {}
+
+
+def test_confluence_signal_exception_skipped():
+    """某信号抛异常 → 当未fire, 不崩, 其他信号正常计数."""
+    closes = [10.0]*6 + [12.0]*14
+    sigs = [lambda c, v: c[-1] == 10, lambda c, v: 1/0]  # 第2个抛异常
+    b = confluence_backtest(sigs, closes, [1000]*20, forward_days=(5,), min_history=5)
+    assert 1 in b  # 只1个有效信号fire
+
+
+def test_aggregate_confluence_collapses_3plus():
+    """count≥3折叠到桶'3+'."""
+    per_stock = [{1: {5: [0.05]}, 2: {5: [0.10, -0.03]}, 3: {5: [0.08]}, 4: {5: [0.12]}}]
+    agg = aggregate_confluence(per_stock, forward_days=(5,))
+    assert 1 in agg and 2 in agg and 3 in agg
+    assert agg[3][5]["count"] == 2  # count3+count4 合并 → 2个样本
+
+
+def test_aggregate_confluence_stats():
+    """聚合统计正确: 桶2的 [0.10, -0.03] → 均值0.035 胜率0.5."""
+    per_stock = [{2: {5: [0.10, -0.03]}}]
+    agg = aggregate_confluence(per_stock, forward_days=(5,))
+    assert agg[2][5]["count"] == 2
+    assert abs(agg[2][5]["avg_return"] - 0.035) < 1e-6
+    assert agg[2][5]["win_rate"] == 0.5
+

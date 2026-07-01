@@ -111,6 +111,62 @@ def edge(signal_avg: float, base_avg: float) -> float:
     return round(signal_avg - base_avg, 4)
 
 
+# === 信号 confluence (多信号同日触发) ===
+
+def confluence_backtest(signal_fns: list, closes: list, vols: list,
+                        highs: list | None = None, lows: list | None = None,
+                        forward_days: tuple = (5, 10, 20),
+                        min_history: int = 60,
+                        stop_pct: float | None = None) -> dict:
+    """单股: 每T数信号命中数, 按count分桶记forward return.
+    返回 {count: {N: [returns]}}. count=0跳过. 信号异常当未fire."""
+    use_stop = stop_pct is not None and highs and lows
+    buckets = {}
+    n = len(closes)
+    max_N = max(forward_days)
+    for T in range(min_history, n - max_N):
+        count = 0
+        for fn in signal_fns:
+            try:
+                if fn(closes[:T + 1], vols[:T + 1]):
+                    count += 1
+            except Exception:
+                pass
+        if count == 0:
+            continue
+        entry = closes[T]
+        if entry <= 0:
+            continue
+        buckets.setdefault(count, {N: [] for N in forward_days})
+        for N in forward_days:
+            if use_stop:
+                ret = realized_return_with_stop(entry, highs[T + 1:T + 1 + N],
+                                                lows[T + 1:T + 1 + N],
+                                                closes[T + 1:T + 1 + N], stop_pct, N)
+            elif T + N < n:
+                ret = (closes[T + N] - entry) / entry
+            else:
+                ret = None
+            if ret is not None:
+                buckets[count][N].append(ret)
+    return buckets
+
+
+def aggregate_confluence(per_stock_buckets: list, forward_days: tuple) -> dict:
+    """合并多股 confluence 桶. count≥3 折叠到 '3' (标3+).
+    返回 {count: {N: stats}}."""
+    merged = {}
+    for b in per_stock_buckets:
+        for count, ndict in b.items():
+            key = count if count <= 2 else 3  # 折叠3+
+            merged.setdefault(key, {N: [] for N in forward_days})
+            for N, rets in ndict.items():
+                if N in merged[key]:
+                    merged[key][N].extend(rets)
+    return {k: aggregate_stats([{N: v for N, v in ndict.items()}], forward_days)
+            for k, ndict in merged.items()}
+
+
 # === 信号包装 (detector → bool signal_fn) ===
 
 def signal_vcp(closes, vols):
@@ -208,16 +264,77 @@ def run_all(forward_days=(5, 10, 20), min_history=80, sample=None,
     return out
 
 
+def run_confluence(forward_days=(5, 10, 20), min_history=80, sample=None,
+                   stop_pct=None) -> dict:
+    """全市场 confluence 回测. 返回 {count_bucket: {N: stats}} + base_rate."""
+    codes = [p.stem for p in cfg.OHLCV_DIR.glob("*.parquet")]
+    if sample:
+        codes = codes[:sample]
+    sig_fns = list(SIGNALS.values())
+    mode = f"止损{stop_pct:.0%}" if stop_pct else "无止损"
+    print(f"⏳ Confluence 回测 {len(codes)} 只, {len(sig_fns)}信号, horizon={forward_days}, {mode}")
+    loaded = []
+    for code in codes:
+        d = _load_parquet(code)
+        if d and len(d[0]) >= min_history + max(forward_days):
+            loaded.append(d)
+    print(f"  有效 {len(loaded)}/{len(codes)}")
+
+    per = []
+    for closes, vols, highs, lows in loaded:
+        per.append(confluence_backtest(sig_fns, closes, vols, highs, lows,
+                                       forward_days, min_history, stop_pct))
+    buckets = aggregate_confluence(per, forward_days)
+
+    # base rate (always-true, 同stop模式)
+    br_per = [backtest_signal(lambda c, v: True, c, v, forward_days, min_history,
+                              stop_pct=stop_pct, highs=h, lows=lw)
+              for c, v, h, lw in loaded]
+    br = aggregate_stats(br_per, forward_days)
+    return buckets, br
+
+
 def main():
     ap = argparse.ArgumentParser(description="历史信号回测: detector forward-return edge")
     ap.add_argument("--horizon", type=int, nargs="+", default=[5, 10, 20])
     ap.add_argument("--min-history", type=int, default=80)
     ap.add_argument("--sample", type=int, default=None, help="只取前N只 (调试)")
     ap.add_argument("--stop", type=float, default=None, help="止损% (如3=3%%), 启用止损建模")
+    ap.add_argument("--confluence", action="store_true", help="多信号叠加模式")
     args = ap.parse_args()
 
     fwd = tuple(args.horizon)
     stop = args.stop / 100 if args.stop else None
+
+    if args.confluence:
+        buckets, br = run_confluence(fwd, args.min_history, args.sample, stop)
+        mode = f"confluence[{f'止损{args.stop}%' if stop else '无止损'}]"
+        print(f"\n=== Confluence 回测 [{mode}] (base: "
+              + ", ".join(f"{N}日均={br[N]['avg_return']:+.2%}" for N in fwd if br.get(N))
+              + ") ===\n")
+        print(f"{'叠加数':<8} {'horizon':>7} {'n':>8} {'胜率':>7} {'均值':>8} {'base':>8} {'edge':>8} {'中位':>8}")
+        for count in sorted(buckets.keys()):
+            label = f"{count}信号" if count < 3 else "3+信号"
+            for N in fwd:
+                s = buckets[count].get(N)
+                if not s:
+                    continue
+                b = br.get(N) or {}
+                e = edge(s["avg_return"], b.get("avg_return", 0))
+                print(f"{label:<8} {N:>5}d {s['count']:>8} {s['win_rate']:>6.1%} "
+                      f"{s['avg_return']:>+7.2%} {b.get('avg_return', 0):>+7.2%} "
+                      f"{e:>+7.2%} {s['median']:>+7.2%}")
+        out_dir = cfg.DAILY_DIR / date.today().isoformat()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        tag = f"_stop{args.stop}" if stop else ""
+        out_file = out_dir / f"confluence{tag}.json"
+        json.dump({"buckets": {str(k): v for k, v in buckets.items()},
+                   "base_rate": br, "mode": mode, "stop_pct": stop,
+                   "horizon": list(fwd), "run_at": date.today().isoformat()},
+                  open(out_file, "w"), ensure_ascii=False, indent=2)
+        print(f"\n✓ 落盘 {out_file}")
+        return
+
     out = run_all(forward_days=fwd, min_history=args.min_history, sample=args.sample,
                   stop_pct=stop)
     br = out.pop("__base_rate__")
