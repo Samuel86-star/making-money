@@ -90,6 +90,13 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
     if n_turtle:
         print(f"  🐢 Turtle 突破命中 {n_turtle}/{len(scored)} 只候选")
 
+    # 2c. 信号 confluence 注入 (2信号=强买点+10, 3+=过热-5, 回测edge依据)
+    n_conf = _confluence_enrich(scored)
+    if n_conf:
+        n2 = sum(1 for s in scored if len(s.get("confluence", [])) == 2)
+        n3 = sum(1 for s in scored if s.get("confluence_warn"))
+        print(f"  🔗 Confluence: 2信号强买点 {n2} 只, 3+过热 {n3} 只")
+
     # 3. 按 (总分, 资金流) 排序, veto 的排除
     valid = [s for s in scored if not s.get("veto")]
     valid.sort(key=lambda x: (x["total"], x.get("net_flow_yi", 0)), reverse=True)
@@ -154,6 +161,59 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
                      "total": t["total"], "level": t["level"]} for t in top]}
 
 
+def _confluence_enrich(scored: list, signal_fns: list | None = None,
+                       signal_names: list | None = None) -> int:
+    """信号 confluence 注入: 数5信号命中数, 按edge回测结果加 boost/penalty.
+
+    回测依据 (docs/review/signal_validation.md confluence段):
+    - 2信号叠加 10d edge +1.53% (1信号+0.17%的9倍), 胜率55%, 中位+0.93% → 强买点 +10
+    - 3+信号 edge≈0 (过热末端/小样本) → penalty -5
+    - 0/1信号: 无额外 (单信号edge≈base, 别重仓)
+
+    signal_fns/signal_names 可注入 (测试用). 默认用 signal_backtest 的5个detector.
+    需 OHLCV parquet, 缺/短则跳过. 全程防御."""
+    if signal_fns is None:
+        from a_stock.signal_backtest import (
+            signal_vcp, signal_wyckoff_accumulation, signal_wyckoff_distribution,
+            signal_turtle_sys1, signal_turtle_sys2)
+        signal_fns = [signal_vcp, signal_wyckoff_accumulation,
+                      signal_wyckoff_distribution, signal_turtle_sys1, signal_turtle_sys2]
+        signal_names = ["VCP", "Wyckoff吸筹", "Wyckoff派发", "Turtle sys1", "Turtle sys2"]
+    import a_stock.ohlcv as ohlcv
+    hit = 0
+    for d in scored:
+        try:
+            df = ohlcv.load_ohlcv(d["code"])
+            if len(df) < 60:
+                continue
+            ccol = "close" if "close" in df.columns else "Close"
+            vcol = "volume" if "volume" in df.columns else "Volume"
+            closes = df[ccol].astype(float).tolist()
+            vols = (df[vcol].astype(float).tolist() if vcol in df.columns
+                    else [0.0] * len(closes))
+            fired = []
+            for nm, fn in zip(signal_names, signal_fns):
+                try:
+                    if fn(closes, vols):
+                        fired.append(nm)
+                except Exception:
+                    pass
+            count = len(fired)
+            if count == 2:
+                d["total"] = d.get("total", 0) + 10
+                d["confluence"] = fired
+                hit += 1
+            elif count >= 3:
+                d["total"] = d.get("total", 0) - 5
+                d["confluence"] = fired
+                d["confluence_warn"] = "3+信号过热"
+                hit += 1
+            # 0/1: 无额外
+        except Exception:
+            continue
+    return hit
+
+
 def _turtle_enrich(scored: list) -> int:
     """Turtle 突破信号注入候选: 命中加 total + 标 turtle 字段.
 
@@ -202,6 +262,10 @@ def _push_results(top: list, sector: dict | None) -> None:
         if tk and tk.get("entry"):
             line += (f" 🐢{('S2' if tk['signal']=='sys2_breakout' else 'S1')}"
                      f"入{tk['entry']:.2f}/止损{tk['stop']:.2f}/{tk['unit_shares']}股")
+        conf = t.get("confluence")
+        if conf:
+            mark = "⚠️" if t.get("confluence_warn") else "🔗"
+            line += f" {mark}{'+'.join(conf)}"
         lines.append(line)
     body = "\n".join(lines)
     push("🎯 早盘候选", body, subtitle=f"top{len(top)}")
@@ -244,7 +308,9 @@ def _persist_candidates(trade_date: str, top: list, strategy: str = "mid") -> in
                 change_pct=t.get("change_pct"),
                 score=t.get("total"),
                 hot_reason=f"{t.get('level', '')} 资金{t.get('net_flow_yi', 0):+.1f}亿"
-                           + (f" 🐢{t['turtle']['signal']}" if t.get("turtle") else ""),
+                           + (f" 🐢{t['turtle']['signal']}" if t.get("turtle") else "")
+                           + (f" 🔗{'-'.join(t['confluence'])}" if t.get("confluence") else "")
+                           + (" ⚠️过热" if t.get("confluence_warn") else ""),
             )
             n += 1
         except Exception as e:
