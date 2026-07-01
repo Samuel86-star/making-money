@@ -52,8 +52,7 @@ def industry_fund_flow(top_n: int = 10) -> dict:
     07-01教训: 科技硬件(电子/通信/半导体)常"涨却巨量流出"=出货,
     不看资金流会被"涨"骗.
 
-    单位: net_flow 与全库一致 (元口径), /1e8 得亿
-    (对齐 screener.py:269 / morning_scan.py:82 / sector_rotation.py:79)."""
+    单位: 板块 push2 f62 为元口径, /1e8 得亿."""
     r = industry_comparison(100)
     seen = set()
     rows = []

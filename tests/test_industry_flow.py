@@ -9,8 +9,8 @@
 def test_industry_fund_flow_dedup_and_unit(monkeypatch):
     import a_stock.a_stock_data.sectors as sectors
 
-    # 模拟 industry_comparison(top_n=100) 返回 top/bottom重复行, net_flow当前为 f62*10000(元)
-    # net_flow 当前口径 = f62 元; net_flow_yi = net_flow/1e8
+    # 模拟 industry_comparison(top_n=100) 返回 top/bottom重复行; net_flow 当前口径 = f62 元
+    # net_flow_yi = net_flow/1e8
     row_in = {"code": "BK1", "name": "非银金融", "change_pct": 4.5,
               "net_flow": 6983000000, "leader": "600909"}  # 69.83亿
     row_out = {"code": "BK2", "name": "电子", "change_pct": 0.5,
@@ -48,3 +48,35 @@ def test_close_scan_includes_industry_flow(monkeypatch):
     assert "industry_flow" in r
     assert r["industry_flow"]["inflow_top"][0]["name"] == "非银金融"
     assert r["industry_flow"]["outflow_top"][0]["name"] == "电子"
+
+
+def test_close_scan_persists_industry_flow(monkeypatch, tmp_path):
+    """非dry_run时 daily_close 持久化 industry_flow JSON, 供历史复盘查询."""
+    import json
+    import sqlite3
+    import a_stock.close_scan as cs
+    import a_stock.config as cfg
+
+    db_path = tmp_path / "screener.sqlite"
+    monkeypatch.setattr(cfg, "SCREENER_DB", db_path)
+    monkeypatch.setattr("a_stock.sector_rotation.snapshot_today", lambda: None, raising=False)
+    monkeypatch.setattr("a_stock.sector_rotation.analyze", lambda: None, raising=False)
+    monkeypatch.setattr("a_stock.sentiment.compute_temp", lambda: {"temp": 30.0, "mood": "谨慎"}, raising=False)
+    monkeypatch.setattr("a_stock.market_regime.regime", lambda code: {"level": "NORMAL", "dist_count": 0, "ftd": None}, raising=False)
+    monkeypatch.setattr("a_stock.anomaly_holdings_loader.load_targets", lambda: [], raising=False)
+    payload = {
+        "inflow_top": [{"name": "非银金融", "change_pct": 4.5, "net_flow_yi": 68.83}],
+        "outflow_top": [{"name": "电子", "change_pct": 0.5, "net_flow_yi": -212.46}],
+        "total": 2,
+    }
+    monkeypatch.setattr("a_stock.a_stock_data.sectors.industry_fund_flow", lambda top_n=10: payload, raising=False)
+    monkeypatch.setattr("a_stock.close_scan.push", lambda *args, **kwargs: None)
+
+    r = cs.run(dry_run=False)
+    assert r["industry_flow"] == payload
+    con = sqlite3.connect(db_path)
+    cols = [row[1] for row in con.execute("PRAGMA table_info(daily_close)")]
+    assert "industry_flow" in cols
+    row = con.execute("SELECT industry_flow FROM daily_close WHERE date=?", (r["date"],)).fetchone()
+    saved = json.loads(row[0])
+    assert saved["inflow_top"][0]["name"] == "非银金融"

@@ -19,9 +19,14 @@ def _init_db() -> None:
                 sector_rotation TEXT,
                 sentiment TEXT,
                 candidates TEXT,
+                industry_flow TEXT,
                 status TEXT DEFAULT 'ok'
             )
         """)
+        # 迁移: 旧库无 industry_flow 列则补 (幂等)
+        cols = {row[1] for row in c.execute("PRAGMA table_info(daily_close)").fetchall()}
+        if "industry_flow" not in cols:
+            c.execute("ALTER TABLE daily_close ADD COLUMN industry_flow TEXT")
 
 
 def run(dry_run: bool = False) -> dict:
@@ -98,12 +103,13 @@ def run(dry_run: bool = False) -> dict:
         with sqlite3.connect(str(cfg.SCREENER_DB)) as c:
             c.execute("""
                 INSERT OR REPLACE INTO daily_close
-                (date, close_at, sector_rotation, sentiment, candidates, status)
-                VALUES (?,?,?,?,?,?)
+                (date, close_at, sector_rotation, sentiment, candidates, industry_flow, status)
+                VALUES (?,?,?,?,?,?,?)
             """, (today, result["close_at"],
                   json.dumps(sector_data, ensure_ascii=False),
                   json.dumps(result.get("sentiment"), ensure_ascii=False),
                   json.dumps(candidates, ensure_ascii=False, default=str),
+                  json.dumps(industry_flow, ensure_ascii=False, default=str) if industry_flow else None,
                   "ok"))
         # 推送盘后摘要
         body_parts = []
@@ -113,7 +119,7 @@ def run(dry_run: bool = False) -> dict:
             body_parts.append(f"情绪:{result['sentiment']['temp']}({result['sentiment']['mood']})")
         if regime_data:
             body_parts.append(f"市场结构:{regime_data['level']}(派发{regime_data['dist_count']})")
-        if industry_flow and industry_flow.get("inflow_top"):
+        if industry_flow and industry_flow.get("inflow_top") and industry_flow.get("outflow_top"):
             top_in = industry_flow["inflow_top"][0]
             top_out = industry_flow["outflow_top"][0]
             body_parts.append(f"流入:{top_in['name']}{top_in['net_flow_yi']:+.0f}亿 流出:{top_out['name']}{top_out['net_flow_yi']:+.0f}亿")
