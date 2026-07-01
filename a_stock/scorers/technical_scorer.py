@@ -122,6 +122,76 @@ def _detect_vcp(closes: list[float], vols: list[float]) -> dict | None:
             "vol_dryup": vol_dryup}
 
 
+def _detect_wyckoff(closes: list[float], vols: list[float]) -> dict | None:
+    """Wyckoff 派发/吸筹识别 (简化版, 喂 [J] 出货假设).
+
+    用 close (HIGH/LOW 部分缓存缺失, 与 _detect_vcp 同口径).
+    - 区间窗: 截至约5日前的25日 (排除最近动作, 纯粹既有区间).
+    - 突破尝试窗: 近5日 (排除当日).
+    - UTAD (派发): 近5日峰值放量破区间上沿, 但当日跌回区间内 = 假突破, 出货.
+    - Spring (吸筹): 近5日谷值放量破区间下沿, 但当日升回区间内 = 假跌破, 收集.
+    - 量能不对称: 区间内下跌放量/上涨缩量=隐性派发, 反之=隐性吸筹.
+
+    返回 dict(phase, signal, ...) 或 None.
+    """
+    n = len(closes)
+    if n < 30 or len(vols) < 30:
+        return None
+    price = closes[-1]
+    range_c = closes[-30:-5]    # 既有区间 (排除近5日动作)
+    range_v = vols[-30:-5]
+    range_high = max(range_c)
+    range_low = min(range_c)
+    rng = range_high - range_low
+    if rng <= 0:
+        return None
+    avg_vol = sum(range_v) / len(range_v)
+    recent_c = closes[-6:-1]     # 近5日突破尝试 (排除当日)
+    recent_v = vols[-6:-1]
+    peak = max(recent_c)
+    trough = min(recent_c)
+    peak_vol = recent_v[recent_c.index(peak)]
+    trough_vol = recent_v[recent_c.index(trough)]
+    # UTAD: 峰值真破区间上沿 + 放量1.8× + 当日跌回区间内
+    utad = (peak > range_high
+            and peak_vol >= avg_vol * 1.8
+            and price <= range_high)
+    # Spring: 谷值真破区间下沿 + 放量1.8× + 当日升回区间内
+    spring = (trough < range_low
+              and trough_vol >= avg_vol * 1.8
+              and price >= range_low)
+    # 量能不对称辅证 (近20日含当日, 上涨日 vs 下跌日总量)
+    seg = closes[-20:]
+    seg_v = vols[-20:]
+    up_vol = down_vol = 0.0
+    for i in range(1, len(seg)):
+        if seg[i] > seg[i - 1]:
+            up_vol += seg_v[i]
+        elif seg[i] < seg[i - 1]:
+            down_vol += seg_v[i]
+    ratio = down_vol / up_vol if up_vol > 0 else 1.0
+    vol_bias = "down_heavy" if ratio >= 1.5 else ("up_heavy" if ratio <= 0.67 else "balanced")
+    in_range = range_low <= price <= range_high
+
+    if utad:
+        return {"phase": "distribution", "signal": "UTAD",
+                "peak": round(peak, 2), "range_high": round(range_high, 2),
+                "pullback_pct": round((peak - price) / peak * 100, 1),
+                "vol_bias": vol_bias, "vol_ratio": round(ratio, 2)}
+    if spring:
+        return {"phase": "accumulation", "signal": "Spring",
+                "trough": round(trough, 2), "range_low": round(range_low, 2),
+                "recovery_pct": round((price - trough) / trough * 100, 1),
+                "vol_bias": vol_bias, "vol_ratio": round(ratio, 2)}
+    if vol_bias == "down_heavy" and in_range:
+        return {"phase": "distribution", "signal": "vol_asymmetry",
+                "vol_ratio": round(ratio, 2), "note": "下跌放量上涨缩量, 转弱手"}
+    if vol_bias == "up_heavy" and in_range:
+        return {"phase": "accumulation", "signal": "vol_asymmetry",
+                "vol_ratio": round(ratio, 2), "note": "上涨放量下跌缩量, 转强手"}
+    return None
+
+
 def score(code: str) -> FactorScore:
     """技术面分档评分. base 50, 加减分."""
     rows = _load_ohlcv(code)
@@ -214,5 +284,15 @@ def score(code: str) -> FactorScore:
         else:
             s += 6
             detail["vcp_setup"] = f"VCP收缩({vcp['contractions']}次, 量未缩)"
+
+    # Wyckoff 派发/吸筹 (强化 [J] 出货假设: 派发-10/吸筹+8)
+    wyck = _detect_wyckoff(closes, vols)
+    if wyck:
+        if wyck["phase"] == "distribution":
+            s -= 10
+            detail["wyckoff"] = f"派发({wyck['signal']})"
+        else:
+            s += 8
+            detail["wyckoff"] = f"吸筹({wyck['signal']})"
 
     return FactorScore(score=s, detail=detail)

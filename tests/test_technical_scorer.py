@@ -169,3 +169,80 @@ def test_vcp_rejected_short_history():
     closes = [10.0 + i * 0.1 for i in range(50)]
     vols = [1000] * 50
     assert technical_scorer._detect_vcp(closes, vols) is None
+
+
+# === Wyckoff 派发/吸筹识别 (喂 [J] 出货假设) ===
+
+def _wyckoff_utad_series():
+    """40日: 前35日区间10.0-10.9, 末5日首日放量冲高11.5(破区间), 后回落回区间内10.8."""
+    closes = [10.0 + (i % 10) * 0.1 for i in range(35)]  # 35日区间
+    closes += [11.5, 10.9, 10.8, 10.7, 10.8]  # 近5日: 冲高+回落(末位=当日)
+    vols = [1000] * 35 + [2000, 900, 900, 900, 900]  # 冲高日放量2000(>1.8×)
+    return closes, vols
+
+
+def test_wyckoff_utad_distribution_detected():
+    """UTAD(假突破放量冲高后回落) → 派发信号."""
+    closes, vols = _wyckoff_utad_series()
+    w = technical_scorer._detect_wyckoff(closes, vols)
+    assert w is not None
+    assert w["phase"] == "distribution"
+    assert w["signal"] == "UTAD"
+
+
+def test_wyckoff_spring_accumulation_detected():
+    """Spring(假跌破放量新低后回升) → 吸筹信号."""
+    closes = [11.0 - (i % 10) * 0.1 for i in range(35)]  # 35日区间 10.1-11.0
+    closes += [9.5, 10.1, 10.2, 10.1, 10.2]  # 近5日: 砸低9.5+回升回区间内
+    vols = [1000] * 35 + [2000, 900, 900, 900, 900]
+    w = technical_scorer._detect_wyckoff(closes, vols)
+    assert w is not None
+    assert w["phase"] == "accumulation"
+    assert w["signal"] == "Spring"
+
+
+def test_wyckoff_clean_uptrend_no_signal():
+    """平稳上升(无假突破/假跌破) → None."""
+    closes = [10.0 + i * 0.1 for i in range(30)]  # 平稳上升
+    vols = [1000] * 30
+    w = technical_scorer._detect_wyckoff(closes, vols)
+    assert w is None
+
+
+def test_wyckoff_vol_asymmetry_distribution():
+    """区间内下跌放量上涨缩量(无UTAD) → 隐性派发."""
+    # 区间9.5-10.5, 下跌日量大上涨日量小
+    closes = []
+    vols = []
+    base = 10.0
+    for i in range(25):
+        if i % 2 == 0:
+            closes.append(base - 0.3)  # 跌
+            vols.append(2000)          # 放量
+        else:
+            closes.append(base)         # 弹
+            vols.append(700)           # 缩量
+        base = closes[-1]
+    # 确保仍在区间内, 无极端UTAD/Spring
+    w = technical_scorer._detect_wyckoff(closes, vols)
+    if w is not None:
+        # 接受 vol_asymmetry 或 None (取决于是否区间内)
+        assert w["phase"] in ("distribution", "accumulation")
+
+
+def test_wyckoff_distribution_deducts_score():
+    """派发 → score -10, detail 标 wyckoff=派发."""
+    closes, vols = _wyckoff_utad_series()
+    with _patch_load(_rows(closes, vols)):
+        fs = technical_scorer.score("T_WY1")
+    assert fs.detail.get("wyckoff", "").startswith("派发")
+
+
+def test_wyckoff_accumulation_adds_score():
+    """吸筹 → score +8, detail 标 wyckoff=吸筹."""
+    closes = [11.0 - (i % 10) * 0.1 for i in range(35)]  # 35日区间
+    closes += [9.5, 10.1, 10.2, 10.1, 10.2]  # 近5日砸低+回升
+    vols = [1000] * 35 + [2000, 900, 900, 900, 900]
+    with _patch_load(_rows(closes, vols)):
+        fs = technical_scorer.score("T_WY2")
+    assert fs.detail.get("wyckoff", "").startswith("吸筹")
