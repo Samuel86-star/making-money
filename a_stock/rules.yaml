@@ -38,8 +38,8 @@ rules:
     shares: 3000
     max_trigger_per_day: 1
     cooldown_min: 240
-    active: true
-    note: "周一14:30后若<=1.70, 试仓3000股"
+    active: false
+    note: "已停用2026-07-01: 通信板块资金流-224亿退潮, 1.70是破位非回踩. 固定价买点在退潮市场是陷阱. 需配合行业资金流+板块趋势重启."
     extra: { weekday_min: 0, time_after: "14:30" }
 
   - name: "通信ETF加码-下探1.60"
@@ -49,8 +49,8 @@ rules:
     shares: 2000
     max_trigger_per_day: 1
     cooldown_min: 240
-    active: true
-    note: "继续下探, 加码2000股"
+    active: false
+    note: "已停用2026-07-01: 同上, 退潮市场不加码."
 
   # === 风控规则 ===
   - name: "单标的日内-7%紧急"
