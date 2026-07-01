@@ -185,7 +185,7 @@
 ### 假设索引
 | 编号 | 假设 | 提出 | 首次可回测日 | 已固化? |
 |---|---|---|---|---|
-| [A] | 强势板块形态确认入场, 不死等深回踩 | 06-30 | 07-07 | 否 (待验证) |
+| [A] | 强势板块形态确认入场, 不死等深回踩 | 06-30 | 07-07 | 否 (待验证) ⚠️VCP无edge |
 | [B] | 资金流surge+已涨>5%不追 | 06-30 | 07-07 | 否 (矛盾待样本) |
 | [C] | scorer"观望偏多"对高位股可能失效 | 06-30 | 07-07 | 否 (待回看) |
 | [D] | ETF止损<2%是数学bug, 用ATR/结构位 | 06-29 | 07-06 | 否* (已写入rules, 待回测确认是否保留) |
@@ -199,6 +199,12 @@
 > *注: [D][E][F][G] 06-29当日即写入 knowledge/rules.yaml (教训直观, 提前固化作为默认规则). 但按"严格5工作日后回测"原则, 7-04起正式回测命中率, 不达标则修正/删除. 即"先用着, 后验证".
 
 ### 验证日志
+- 2026-07-01 **信号历史回测 (detector edge 验证)**: 建 `signal_backtest.py`, 5165只parquet扫5信号×3horizon. 诚实裁决 (详 docs/review/signal_validation.md):
+  - ✅ **Turtle sys1(20日突破)真edge**: 10日horizon edge +1.00%/胜率51.8%(base+4.9pp)/中位+0.34% — 唯一分布性正期望, morning_scan的+5加分有据.
+  - ⚠️ Turtle sys2(55日): 20日edge+0.85%但低胜率高方差(趋势型, 需宽止损长持有).
+  - ✅ **Wyckoff派发有效回避信号**: 5日edge-0.16%=派发后弱于base, 出货警告方向对, scorer的-10合理(作不买过滤).
+  - ❌ **VCP(Minervini)无edge**: 三horizon全≈0, 胜率<base. 根因: detector检收缩但不含突破确认→假形态误命中. [A]量化基础塌, 待修正(加突破确认重测)或暂摘除加分.
+  - 教训: 不验=自欺. VCP建时信心满, 回测打平base. base rate正(涨市)→真考验在跌市.
 - 2026-07-01 **Mark Douglas 概率思维内化 (P0 非代码)**: 产出 `docs/knowledge/06-交易心理与概率思维.md`. 核心范式: 确定性思维→概率思维 (06-29恐慌卖=用确定性做概率). Douglas 5事实/7原则逐条对照06-29违反. 内化操作: 盘前"亏到止损是概率成本非威胁" / 盘中"每次想操作前问信号还是情绪" / 盘后"单笔不评判, 攒≥30样本". 扩充 pre_market_checklist 第5节为具体触发器. 与项目系统硬连接: scorer量化优势/rules.yaml预定义风险/backtest_hypothesis样本判定. 至此学习路径P0+P1+P2全部落地 (代码+心理).
 - 2026-07-01 **Turtle 接入 morning_scan**: `_turtle_enrich` 在评分后对每候选跑 `turtle.analyze`, 命中突破→加total (sys2+8/sys1+5) + 标 turtle 字段(入场/止损/Unit股数), 推送显示🐢S2入X/止损Y/N股, candidate_history hot_reason 注记. 真实数据E2E: 159516 sys2突破→60+8=68 入场1.762/止损1.574/4200股; 600276无突破不变. 全程防御(无parquet/异常跳过). 全套249 passed (+6新), 0回归.
 - 2026-07-01 **个股资金流 super_zhuan 接入 moneyflow_scorer**: 修 `stock_fund_flow_120d` 字段 (f1-f7全拉, 修正 large/small 误标, 加 super超大单/big/medium/main_pct; main向后兼容screener不破). scorer +4维: 超大单±8(smart money) + 资金加速±5(3d日均 vs 5d日均) + 量价背离±10(价升主力流出=个股级[J]派发/价跌主力流入=吸筹). 字段语义交易日自检测试(main≈super+big, 误差<20%, 非交易日skip). 强化[J]假设个股维度. 全套243 passed (+11新), 0回归.
