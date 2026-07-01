@@ -199,6 +199,7 @@
 > *注: [D][E][F][G] 06-29当日即写入 knowledge/rules.yaml (教训直观, 提前固化作为默认规则). 但按"严格5工作日后回测"原则, 7-04起正式回测命中率, 不达标则修正/删除. 即"先用着, 后验证".
 
 ### 验证日志
+- 2026-07-01 **Turtle 接入 morning_scan**: `_turtle_enrich` 在评分后对每候选跑 `turtle.analyze`, 命中突破→加total (sys2+8/sys1+5) + 标 turtle 字段(入场/止损/Unit股数), 推送显示🐢S2入X/止损Y/N股, candidate_history hot_reason 注记. 真实数据E2E: 159516 sys2突破→60+8=68 入场1.762/止损1.574/4200股; 600276无突破不变. 全程防御(无parquet/异常跳过). 全套249 passed (+6新), 0回归.
 - 2026-07-01 **个股资金流 super_zhuan 接入 moneyflow_scorer**: 修 `stock_fund_flow_120d` 字段 (f1-f7全拉, 修正 large/small 误标, 加 super超大单/big/medium/main_pct; main向后兼容screener不破). scorer +4维: 超大单±8(smart money) + 资金加速±5(3d日均 vs 5d日均) + 量价背离±10(价升主力流出=个股级[J]派发/价跌主力流入=吸筹). 字段语义交易日自检测试(main≈super+big, 误差<20%, 非交易日skip). 强化[J]假设个股维度. 全套243 passed (+11新), 0回归.
 - 2026-07-01 **P2 工具落地**: ①Wyckoff派发/吸筹进 technical_scorer (`_detect_wyckoff`: UTAD/Spring/量能不对称, 区间窗-30:-5+突破窗近5日, 派发-10/吸筹+8). 全市场UTAD 1.52%/Spring 0.10%(严选, 真假突破), 持仓全None(正常回调非出货, 排除正确). ②Turtle突破系统新模块 `a_stock/turtle.py` (Donchian sys1=20/sys2=55突破 + 2×ATR止损 + 1%Unit + 4Unit金字塔+0.5N). 159516实测sys2突破: 入场1.762/止损1.574/1Unit4200股/金字塔1.809,1.856,1.903 = 量化印证07-01强势入场. 强化[J]出货+Turtle纪律. 全套233 passed (+19新), 0回归.
 - 2026-07-01 **P1 工具落地**: VCP(Minervini)量化进 technical_scorer (`_detect_vcp`, 完整VCP+12/部分+6), Van Tharp R倍数进 position_sizer (risk/reward_per_share + R_multiple + rationale R语言). 全市场VCP命中1.1% (55/5183, 选择性合理). 强化 [A] 量化基础: 强势入场不再纯靠形态肉眼判断, scorer 自动标 `vcp_setup`. 159516非VCP(稳定上行非收缩基底, 拒绝正确). 全套 214 passed (+13新), 0回归.

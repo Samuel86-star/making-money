@@ -85,6 +85,11 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
         except Exception as e:
             print(f"  ⚠ {code} 评分失败: {e}")
 
+    # 2b. Turtle 突破注入 (Donchian 突破=高确信趋势入场, sys2+8/sys1+5)
+    n_turtle = _turtle_enrich(scored)
+    if n_turtle:
+        print(f"  🐢 Turtle 突破命中 {n_turtle}/{len(scored)} 只候选")
+
     # 3. 按 (总分, 资金流) 排序, veto 的排除
     valid = [s for s in scored if not s.get("veto")]
     valid.sort(key=lambda x: (x["total"], x.get("net_flow_yi", 0)), reverse=True)
@@ -149,6 +154,36 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
                      "total": t["total"], "level": t["level"]} for t in top]}
 
 
+def _turtle_enrich(scored: list) -> int:
+    """Turtle 突破信号注入候选: 命中加 total + 标 turtle 字段.
+
+    sys2 (55日突破) +8 / sys1 (20日突破) +5 — 高确信趋势入场, 直接抬排名.
+    每候选跑 turtle.analyze (需 OHLCV parquet, 缺则跳过).
+    返回命中数. 全程防御: 异常不影响其他候选."""
+    try:
+        from a_stock import turtle
+    except Exception:
+        return 0
+    hit = 0
+    for d in scored:
+        try:
+            t = turtle.analyze(d["code"])
+            if t and t.signal:
+                boost = 8 if t.signal == "sys2_breakout" else 5
+                d["total"] = d.get("total", 0) + boost
+                d["turtle"] = {
+                    "signal": t.signal,
+                    "entry": t.entry,
+                    "stop": t.stop,
+                    "unit_shares": t.unit_shares,
+                    "atr": t.atr,
+                }
+                hit += 1
+        except Exception:
+            continue
+    return hit
+
+
 def _push_results(top: list, sector: dict | None) -> None:
     """推送候选 top5 + 板块."""
     # 板块轮动
@@ -161,8 +196,13 @@ def _push_results(top: list, sector: dict | None) -> None:
     # 候选 top
     lines = []
     for i, t in enumerate(top, 1):
-        lines.append(f"{i}. {t['name']}({t['code']}) {t['total']}分 {t['level']} "
-                     f"资金{t.get('net_flow_yi', 0):+.1f}亿")
+        line = (f"{i}. {t['name']}({t['code']}) {t['total']}分 {t['level']} "
+                f"资金{t.get('net_flow_yi', 0):+.1f}亿")
+        tk = t.get("turtle")
+        if tk and tk.get("entry"):
+            line += (f" 🐢{('S2' if tk['signal']=='sys2_breakout' else 'S1')}"
+                     f"入{tk['entry']:.2f}/止损{tk['stop']:.2f}/{tk['unit_shares']}股")
+        lines.append(line)
     body = "\n".join(lines)
     push("🎯 早盘候选", body, subtitle=f"top{len(top)}")
 
@@ -203,7 +243,8 @@ def _persist_candidates(trade_date: str, top: list, strategy: str = "mid") -> in
                 net_flow=round((t.get("net_flow_yi") or 0) * 1e8),
                 change_pct=t.get("change_pct"),
                 score=t.get("total"),
-                hot_reason=f"{t.get('level', '')} 资金{t.get('net_flow_yi', 0):+.1f}亿",
+                hot_reason=f"{t.get('level', '')} 资金{t.get('net_flow_yi', 0):+.1f}亿"
+                           + (f" 🐢{t['turtle']['signal']}" if t.get("turtle") else ""),
             )
             n += 1
         except Exception as e:
