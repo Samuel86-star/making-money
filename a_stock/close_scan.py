@@ -70,6 +70,15 @@ def run(dry_run: bool = False) -> dict:
     except Exception as e:
         result["regime_error"] = str(e)
 
+    # 2c. 行业资金流 (07-01实战新增: 每日必看, 避免被"涨却流出"骗)
+    industry_flow = None
+    try:
+        from a_stock.a_stock_data.sectors import industry_fund_flow
+        industry_flow = industry_fund_flow(top_n=10)
+        result["industry_flow"] = industry_flow
+    except Exception as e:
+        result["industry_flow_error"] = str(e)
+
     # 3. 持仓评分快照
     candidates = []
     try:
@@ -104,6 +113,10 @@ def run(dry_run: bool = False) -> dict:
             body_parts.append(f"情绪:{result['sentiment']['temp']}({result['sentiment']['mood']})")
         if regime_data:
             body_parts.append(f"市场结构:{regime_data['level']}(派发{regime_data['dist_count']})")
+        if industry_flow and industry_flow.get("inflow_top"):
+            top_in = industry_flow["inflow_top"][0]
+            top_out = industry_flow["outflow_top"][0]
+            body_parts.append(f"流入:{top_in['name']}{top_in['net_flow_yi']:+.0f}亿 流出:{top_out['name']}{top_out['net_flow_yi']:+.0f}亿")
         if candidates:
             top = sorted(candidates, key=lambda x: x["total"], reverse=True)[:3]
             body_parts.append("top3: " + " ".join(f"{c['name']}{c['total']}" for c in top))
@@ -126,6 +139,15 @@ def main():
         rg = r["regime"]
         ftd_s = f" FTD:{rg['ftd']['date']}" if rg.get("ftd") else ""
         print(f"市场结构: {rg['level']} (派发日{rg['dist_count']}{ftd_s})")
+    if r.get("industry_flow"):
+        iflow = r["industry_flow"]
+        print(f"行业资金流 (共{iflow.get('total',0)}行业):")
+        print("  净流入TOP5:")
+        for s in iflow.get("inflow_top", [])[:5]:
+            print(f"    {s['name']:<12} 涨{s['change_pct']:+.2f}% 净流{s['net_flow_yi']:+.2f}亿")
+        print("  净流出TOP5:")
+        for s in iflow.get("outflow_top", [])[:5]:
+            print(f"    {s['name']:<12} 涨{s['change_pct']:+.2f}% 净流{s['net_flow_yi']:+.2f}亿")
     if r.get("candidates"):
         print(f"持仓评分 top:")
         for c in sorted(r["candidates"], key=lambda x: x["total"], reverse=True)[:5]:

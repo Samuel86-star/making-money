@@ -72,11 +72,9 @@ def snapshot_today() -> dict:
 
     with sqlite3.connect(str(HISTORY_DB)) as c:
         for s in top:
-            # industry_comparison 的 net_flow = f62*10000, f62 实际是元 → 被放大1万倍
-            # 还原: /1e4 得元, 再 /1e8 得亿
+            # industry_comparison net_flow 已是元口径 (f62), /1e8 得亿
             raw = s["net_flow"] or 0
-            nf_yuan = raw / 1e4 if abs(raw) > 1e10 else raw
-            nf_yi = nf_yuan / 1e8
+            nf_yi = raw / 1e8
             c.execute("""
                 INSERT OR REPLACE INTO sector_daily
                 (date, rank, name, code, change_pct, net_flow, leader)
@@ -211,8 +209,7 @@ def main():
         print("今日 top3:")
         for s in r["top3"]:
             raw = s["net_flow"] or 0
-            nf_yuan = raw / 1e4 if abs(raw) > 1e10 else raw
-            print(f"  {s['name']} {s['change_pct']:+.2f}% 净流{nf_yuan/1e8:+.2f}亿")
+            print(f"  {s['name']} {s['change_pct']:+.2f}% 净流{raw/1e8:+.2f}亿")
     elif args.cmd == "analyze":
         r = analyze()
         if not r:

@@ -32,7 +32,7 @@ def industry_comparison(top_n: int = 20) -> dict:
             "down_count": item.get("f105", 0),
             "leader": item.get("f140", ""),
             "leader_change": item.get("f136", 0),
-            "net_flow": int(item.get("f62") or 0) * 10000,  # push2 万元→元
+            "net_flow": int(item.get("f62") or 0),  # push2 f62 元口径
         })
 
     return {
@@ -40,3 +40,38 @@ def industry_comparison(top_n: int = 20) -> dict:
         "bottom": rows[-top_n:],
         "total": len(rows),
     }
+
+
+def industry_fund_flow(top_n: int = 10) -> dict:
+    """行业资金流TOP流入/流出 (07-01上午实战新增, 每日必看).
+
+    返回: {inflow_top:[{name,change_pct,net_flow_yi,leader}],
+           outflow_top:[...], total}
+    net_flow_yi = 净流入亿元 (正=流入, 负=流出).
+
+    07-01教训: 科技硬件(电子/通信/半导体)常"涨却巨量流出"=出货,
+    不看资金流会被"涨"骗.
+
+    单位: net_flow 与全库一致 (元口径), /1e8 得亿
+    (对齐 screener.py:269 / morning_scan.py:82 / sector_rotation.py:79)."""
+    r = industry_comparison(100)
+    seen = set()
+    rows = []
+    for x in r["top"] + r["bottom"]:
+        k = (x["code"], x["name"])
+        if k in seen:
+            continue
+        seen.add(k)
+        rows.append(x)
+    out = [
+        {
+            "name": x["name"],
+            "change_pct": x["change_pct"],
+            "net_flow_yi": round(x["net_flow"] / 1e8, 2),
+            "leader": x["leader"],
+        }
+        for x in rows
+    ]
+    inflow = sorted(out, key=lambda x: x["net_flow_yi"], reverse=True)[:top_n]
+    outflow = sorted(out, key=lambda x: x["net_flow_yi"])[:top_n]
+    return {"inflow_top": inflow, "outflow_top": outflow, "total": len(rows)}
