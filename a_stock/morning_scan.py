@@ -139,6 +139,11 @@ def _scan_impl(top_n: int, score_top: int, dry_run: bool) -> dict:
                     "scanned_at": datetime.now().isoformat()},
                    ensure_ascii=False, indent=2, default=str))
 
+    # 7b. 写 candidate_history 表 (供 backtest_hypothesis / 假设[A][B][C]回测)
+    if top and not dry_run:
+        n = _persist_candidates(date.today().isoformat(), top)
+        print(f"  ✓ candidate_history 写入 {n}/{len(top)} 条")
+
     return {"candidates": len(top), "sector": sector,
             "top": [{"code": t["code"], "name": t["name"],
                      "total": t["total"], "level": t["level"]} for t in top]}
@@ -172,6 +177,38 @@ def _save_to_watchlist(top: list) -> None:
                              note=f"评分{t['total']} {t['level']}")
         except Exception:
             pass
+
+
+def _persist_candidates(trade_date: str, top: list, strategy: str = "mid") -> int:
+    """写候选到 screener.candidate_history (供 backtest_hypothesis / 假设[A][B][C]回测).
+
+    早期 morning_scan 只写 JSON + watchlist, 没写表 → candidate_history 一直空,
+    到回测日无数据源可验 [A]强势入场/[B]surge不追/[C]scorer失效.
+    字段映射: net_flow_yi(亿) → net_flow(元, ×1e8); total → score; level+资金 → hot_reason.
+    strategy 默认 mid (morning_scan 候选不区分短中, 评分偏中线).
+    """
+    from a_stock import db
+    n = 0
+    for t in top:
+        try:
+            # sector 从评分 factors 取 (sector_scorer detail.industry), 无则 None
+            sector = (t.get("factors", {})
+                      .get("sector", {})
+                      .get("detail", {})
+                      .get("industry")) or None
+            db.upsert_candidate(
+                trade_date, strategy, t["code"],
+                name=t.get("name"),
+                sector=sector,
+                net_flow=round((t.get("net_flow_yi") or 0) * 1e8),
+                change_pct=t.get("change_pct"),
+                score=t.get("total"),
+                hot_reason=f"{t.get('level', '')} 资金{t.get('net_flow_yi', 0):+.1f}亿",
+            )
+            n += 1
+        except Exception as e:
+            print(f"  ⚠ candidate_history 写入失败 {t.get('code')}: {e}")
+    return n
 
 
 def main():

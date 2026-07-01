@@ -29,6 +29,28 @@ def _init_db() -> None:
             c.execute("ALTER TABLE daily_close ADD COLUMN industry_flow TEXT")
 
 
+def _fetch_industry_flow(fetch_fn, retries: int = 2) -> tuple[dict | None, str | None]:
+    """拉行业资金流带重试. 返回 (flow, err).
+
+    15:10 盘后落盘时 industry_fund_flow 瞬时拉取失败常见 (网络/东财push2抖动),
+    旧逻辑单次失败静默写 NULL → daily_close.industry_flow 历史缺口 (06-29/30/07-01全空).
+    现加重试 + 调用方据此推送 warning, 不再静默.
+    异常和空返回都视为失败 (防御: fetch_fn 返回 None 不抛异常时也不静默).
+    """
+    err = None
+    for attempt in range(retries):
+        try:
+            flow = fetch_fn()
+            if flow:
+                return flow, None
+            err = "返回空结果"
+        except Exception as e:
+            err = str(e)
+        if attempt < retries - 1:
+            print(f"  ⚠ 行业资金流拉取失败 (第 {attempt + 1} 次失败, 重试中): {err}")
+    return None, err
+
+
 def run(dry_run: bool = False) -> dict:
     """盘后落盘."""
     _init_db()
@@ -76,13 +98,19 @@ def run(dry_run: bool = False) -> dict:
         result["regime_error"] = str(e)
 
     # 2c. 行业资金流 (07-01实战新增: 每日必看, 避免被"涨却流出"骗)
-    industry_flow = None
-    try:
-        from a_stock.a_stock_data.sectors import industry_fund_flow
-        industry_flow = industry_fund_flow(top_n=10)
+    # 重试1次 (15:10 瞬时拉取失败常见, 旧逻辑静默写 NULL → 历史缺口)
+    from a_stock.a_stock_data.sectors import industry_fund_flow
+    industry_flow, iflow_err = _fetch_industry_flow(
+        lambda: industry_fund_flow(top_n=10), retries=2)
+    if industry_flow:
         result["industry_flow"] = industry_flow
-    except Exception as e:
-        result["industry_flow_error"] = str(e)
+    elif iflow_err:
+        result["industry_flow_error"] = iflow_err
+        try:
+            push("⚠ 行业资金流缺失", f"盘后拉取失败: {iflow_err[:80]}",
+                 subtitle="close_scan")
+        except Exception:
+            pass
 
     # 3. 持仓评分快照
     candidates = []

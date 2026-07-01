@@ -48,6 +48,8 @@
 2. 行业资金流接入close_scan持久化 (前一日已做, 今日收盘首次完整跑通)
 3. 修净流单位口径 (f62元/1e8=亿, 全库统一)
 4. superpowers /code-review max effort 修6 findings
+5. 修假设回测数据源缺口: morning_scan 存 candidate_history (Issue1, 解[A][B][C]到 07-07 无数据) + close_scan industry_flow 失败重试告警 (Issue3, 解[J]数据缺口). +5 测试, 全套 200 passed.
+6. 写 docs/knowledge/05-学习路径与技能建设.md (老板指示主动找技能: 三阶段经典补课 + edge 库建设 + 验证主回路)
 
 ### 明日关注
 - 515650目标1.006(MA20), 收0.990站成本, 继续持有
