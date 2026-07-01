@@ -62,6 +62,66 @@ def _macd(closes: list[float]):
     return dif, dea, hist
 
 
+def _range_pct(seg: list[float]) -> float:
+    """段内 (max-min)/min × 100. 用于VCP收缩幅度."""
+    if not seg or min(seg) <= 0:
+        return 0.0
+    return (max(seg) - min(seg)) / min(seg) * 100
+
+
+def _detect_vcp(closes: list[float], vols: list[float]) -> dict | None:
+    """Minervini VCP (Volatility Contraction Pattern) 检测, A股适配.
+
+    强化 [A] 强势入场假设: VCP = 趋势中价格波动从左到右递减, 末段最窄+缩量,
+    突破前低风险入场点. 严格 SEPA 需 MA150/MA200, A股/ETF 历史多不足,
+    降级用 MA20/MA60 + 距低点≥25% 判强势. 用 close 算范围 (HIGH/LOW 部分缓存缺失).
+
+    返回 dict(left_range, mid_range, right_range, contractions, vol_dryup) 或 None.
+    """
+    n = len(closes)
+    if n < 60:
+        return None
+    price = closes[-1]
+    ma20 = _sma(closes, 20)
+    ma60 = _sma(closes, 60)
+    if ma20 <= 0 or ma60 <= 0:
+        return None
+    # 趋势模板: 价 > MA20 > MA60
+    if not (price > ma20 > ma60):
+        return None
+    # MA60 上行 (20日前MA60 < 今MA60); 数据够才校验
+    if n >= 80:
+        ma60_past = _sma(closes[:-20], 60)
+        if ma60_past > 0 and ma60_past >= ma60:
+            return None
+    # 强势: 距近60日低 ≥15% (Minervini 原值25%针对52周, A股60日窗口适配降到15%)
+    lookback = min(n, 60)
+    low60 = min(closes[-lookback:])
+    if low60 <= 0 or price < low60 * 1.15:
+        return None
+    # 收缩: 末40日(或可用长度)分3段, 右<中<左 且 右≤0.6×左
+    w = closes[-min(n, 40):]
+    seg = len(w) // 3
+    if seg < 5:  # 每段太短不可信
+        return None
+    left_c, mid_c, right_c = w[-3 * seg:-2 * seg], w[-2 * seg:-seg], w[-seg:]
+    lr, mr, rr = _range_pct(left_c), _range_pct(mid_c), _range_pct(right_c)
+    if not (lr > mr > rr > 0 and rr <= 0.6 * lr):
+        return None
+    # 缩量: 右段均量 < 左段×0.9
+    vol_dryup = False
+    if len(vols) >= 3 * seg:
+        wv = vols[-3 * seg:]
+        left_v = sum(wv[:seg]) / seg
+        right_v = sum(wv[2 * seg:3 * seg]) / seg
+        if left_v > 0:
+            vol_dryup = right_v < left_v * 0.9
+    contractions = 2 if (lr > mr > rr) else 1
+    return {"left_range": round(lr, 3), "mid_range": round(mr, 3),
+            "right_range": round(rr, 3), "contractions": contractions,
+            "vol_dryup": vol_dryup}
+
+
 def score(code: str) -> FactorScore:
     """技术面分档评分. base 50, 加减分."""
     rows = _load_ohlcv(code)
@@ -144,5 +204,15 @@ def score(code: str) -> FactorScore:
         elif not price_up and vol_ratio < 0.8:
             s += 5  # 缩量破位=洗盘, 反向加分
             detail["vol_breakdown"] = "缩量洗盘"
+
+    # VCP 强势入场 setup (Minervini SEPA, 强化 [A] 假设)
+    vcp = _detect_vcp(closes, vols)
+    if vcp:
+        if vcp["vol_dryup"]:
+            s += 12
+            detail["vcp_setup"] = f"VCP完整({vcp['contractions']}次收缩+缩量, 末{vcp['right_range']:.1f}%)"
+        else:
+            s += 6
+            detail["vcp_setup"] = f"VCP收缩({vcp['contractions']}次, 量未缩)"
 
     return FactorScore(score=s, detail=detail)

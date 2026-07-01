@@ -104,3 +104,68 @@ def test_pullback_not_triggered_in_downtrend():
     with _patch_load(_rows(closes, vols)):
         fs = technical_scorer.score("T_PULL3")
     assert "pullback_buy" not in fs.detail
+
+
+# === VCP 量化 (Minervini SEPA, A股适配, 强化 [A] 假设) ===
+
+def _vcp_series():
+    """90日: 前50上升建立趋势, 末40日收缩(左宽→右窄)+缩量."""
+    closes = [10.0 + i * 0.09 for i in range(50)]  # 10.0→14.41 上升
+    left = [14.5, 15.5, 14.0, 15.3, 13.8, 15.0, 14.2, 15.4, 13.9, 15.1, 14.0, 15.2, 14.3]
+    mid = [15.0, 15.6, 14.9, 15.5, 15.0, 15.4, 14.8, 15.3, 15.0, 15.5, 14.9, 15.2, 15.0]
+    right = [15.1, 15.3, 15.0, 15.2, 15.1, 15.3, 15.2, 15.0, 15.2, 15.1, 15.3, 15.2, 15.1, 15.25]
+    closes = closes + left + mid + right  # 50+13+13+14=90
+    vols = [2000] * 50 + [2000] * 13 + [1200] * 13 + [600] * 14  # 左高右低=缩量
+    return closes, vols
+
+
+def test_vcp_full_pattern_detected():
+    """完整VCP(趋势+收缩+缩量) → _detect_vcp 返回 dict, contractions≥2, vol_dryup=True."""
+    closes, vols = _vcp_series()
+    vcp = technical_scorer._detect_vcp(closes, vols)
+    assert vcp is not None
+    assert vcp["contractions"] >= 2
+    assert vcp["vol_dryup"] is True
+    assert vcp["left_range"] > vcp["mid_range"] > vcp["right_range"]
+
+
+def test_vcp_scoring_full_adds_12():
+    """完整VCP → score +12, detail 标 vcp_setup."""
+    closes, vols = _vcp_series()
+    with _patch_load(_rows(closes, vols)):
+        fs = technical_scorer.score("T_VCP1")
+    assert fs.detail.get("vcp_setup", "").startswith("VCP完整")
+    # 对比无VCP序列分数应更高 (用末段不收缩的对照)
+
+
+def test_vcp_rejected_in_downtrend():
+    """下降趋势 → 趋势模板不满足 → None."""
+    closes = [20.0 - i * 0.1 for i in range(90)]  # 下降
+    vols = [1000] * 90
+    assert technical_scorer._detect_vcp(closes, vols) is None
+
+
+def test_vcp_rejected_expanding_ranges():
+    """末段范围扩大(非收缩) → None."""
+    closes, _ = _vcp_series()
+    # 把末段改成扩大震荡
+    closes[-14:] = [15.0, 15.5, 14.8, 15.8, 14.5, 16.0, 14.2, 16.2, 14.0, 16.5, 13.8, 16.8, 13.5, 17.0]
+    vols = [1000] * 90
+    vcp = technical_scorer._detect_vcp(closes, vols)
+    assert vcp is None
+
+
+def test_vcp_partial_no_dryup_still_detected():
+    """收缩满足但量没缩 → 检出 VCP, vol_dryup=False (部分VCP, +6)."""
+    closes, _ = _vcp_series()
+    vols = [1000] * 90  # 均量, 无缩量
+    vcp = technical_scorer._detect_vcp(closes, vols)
+    assert vcp is not None
+    assert vcp["vol_dryup"] is False
+
+
+def test_vcp_rejected_short_history():
+    """<60日 → None (数据不足)."""
+    closes = [10.0 + i * 0.1 for i in range(50)]
+    vols = [1000] * 50
+    assert technical_scorer._detect_vcp(closes, vols) is None

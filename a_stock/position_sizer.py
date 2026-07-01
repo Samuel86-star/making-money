@@ -43,13 +43,17 @@ def suggest(c: Candidate, total_capital: float, method: str = "kelly",
     stop_pct = (c.price - c.stop_loss) / c.price
     target_pct = (c.target_price - c.price) / c.price
     payoff = target_pct / stop_pct if stop_pct > 0 else 0
+    # Van Tharp R 倍数: 1R = 每股风险, reward = 每股目标收益
+    risk_per_share = c.price - c.stop_loss
+    reward_per_share = c.target_price - c.price
+    r_multiple = reward_per_share / risk_per_share if risk_per_share > 0 else 0
 
     if method == "kelly":
         frac = _fractional_kelly(c.win_rate, payoff, kelly_fraction)
         rationale = f"Kelly({c.win_rate:.0%}×{payoff:.2f})×{kelly_fraction}={frac:.1%}"
     elif method == "fixed":
         frac = _fixed_fractional(risk_per_trade, stop_pct)
-        rationale = f"固定风险 {risk_per_trade:.1%}/止损 {stop_pct:.1%}"
+        rationale = f"固定风险 风险1R={risk_per_trade:.1%}资本/止损{stop_pct:.1%} 博{r_multiple:.1f}R"
     else:
         frac = 0.10
         rationale = "vol 不适用单标的"
@@ -80,6 +84,9 @@ def suggest(c: Candidate, total_capital: float, method: str = "kelly",
         "stop_pct": round(stop_pct, 4),
         "target_pct": round(target_pct, 4),
         "payoff_ratio": round(payoff, 2),
+        "risk_per_share": round(risk_per_share, 4),
+        "reward_per_share": round(reward_per_share, 4),
+        "R_multiple": round(r_multiple, 2),
     }
 
 
