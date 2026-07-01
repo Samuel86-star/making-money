@@ -72,54 +72,62 @@ def _range_pct(seg: list[float]) -> float:
 def _detect_vcp(closes: list[float], vols: list[float]) -> dict | None:
     """Minervini VCP (Volatility Contraction Pattern) 检测, A股适配.
 
-    强化 [A] 强势入场假设: VCP = 趋势中价格波动从左到右递减, 末段最窄+缩量,
-    突破前低风险入场点. 严格 SEPA 需 MA150/MA200, A股/ETF 历史多不足,
-    降级用 MA20/MA60 + 距低点≥25% 判强势. 用 close 算范围 (HIGH/LOW 部分缓存缺失).
+    强化 [A] 强势入场假设. 2026-07-01 修正 (回测发现旧版无edge):
+    必须含**突破确认** — 收缩形态 + 当日突破 right 段高 + 放量, 才触发.
+    旧版只检收缩 → 假形态(收缩后继续震荡)误命中 → 三horizon edge全≈0.
 
-    返回 dict(left_range, mid_range, right_range, contractions, vol_dryup) 或 None.
+    逻辑: base (排除当日) 需收缩 (左>中>右, 右≤0.6×左) + 趋势 + 强势;
+    当日 (closes[-1]) 需 > right段高 (突破) + 当日量 ≥1.3×20日均 (放量).
+
+    返回 dict(left_range, mid_range, right_range, contractions, breakout_high, vol_confirm) 或 None.
     """
     n = len(closes)
     if n < 60:
         return None
-    price = closes[-1]
-    ma20 = _sma(closes, 20)
-    ma60 = _sma(closes, 60)
+    price = closes[-1]          # 当日 = 候选突破日
+    base = closes[:-1]          # base = 排除当日的收缩形态
+    base_v = vols[:-1] if len(vols) >= n else vols
+    ma20 = _sma(base, 20) if len(base) >= 20 else _sma(closes, 20)
+    ma60 = _sma(base, 60) if len(base) >= 60 else _sma(closes, 60)
     if ma20 <= 0 or ma60 <= 0:
         return None
-    # 趋势模板: 价 > MA20 > MA60
+    # 趋势模板: 当日价 > MA20 > MA60 (今日强, base 在多头)
     if not (price > ma20 > ma60):
         return None
-    # MA60 上行 (20日前MA60 < 今MA60); 数据够才校验
-    if n >= 80:
-        ma60_past = _sma(closes[:-20], 60)
+    # MA60 上行 (20日前 < 今日)
+    if len(base) >= 80:
+        ma60_past = _sma(base[:-20], 60)
         if ma60_past > 0 and ma60_past >= ma60:
             return None
-    # 强势: 距近60日低 ≥15% (Minervini 原值25%针对52周, A股60日窗口适配降到15%)
-    lookback = min(n, 60)
-    low60 = min(closes[-lookback:])
+    # 强势: 当日价距 base 近60日低 ≥15%
+    lookback = min(len(base), 60)
+    low60 = min(base[-lookback:])
     if low60 <= 0 or price < low60 * 1.15:
         return None
-    # 收缩: 末40日(或可用长度)分3段, 右<中<左 且 右≤0.6×左
-    w = closes[-min(n, 40):]
+    # base 收缩: base 末40日分3段, 右<中<左 且 右≤0.6×左
+    w = base[-min(len(base), 40):]
     seg = len(w) // 3
-    if seg < 5:  # 每段太短不可信
+    if seg < 5:
         return None
     left_c, mid_c, right_c = w[-3 * seg:-2 * seg], w[-2 * seg:-seg], w[-seg:]
     lr, mr, rr = _range_pct(left_c), _range_pct(mid_c), _range_pct(right_c)
     if not (lr > mr > rr > 0 and rr <= 0.6 * lr):
         return None
-    # 缩量: 右段均量 < 左段×0.9
-    vol_dryup = False
-    if len(vols) >= 3 * seg:
-        wv = vols[-3 * seg:]
-        left_v = sum(wv[:seg]) / seg
-        right_v = sum(wv[2 * seg:3 * seg]) / seg
-        if left_v > 0:
-            vol_dryup = right_v < left_v * 0.9
+    # ⭐ 突破确认: 当日价 > right 段高 (突破收缩上沿)
+    right_high = max(right_c)
+    if price <= right_high * 1.001:
+        return None
+    # 当日放量 (≥1.3× base 20日均)
+    vol_confirm = False
+    if len(vols) >= 1 and len(base_v) >= 20:
+        avg_vol = sum(base_v[-20:]) / 20
+        if avg_vol > 0:
+            vol_confirm = vols[-1] >= avg_vol * 1.3
     contractions = 2 if (lr > mr > rr) else 1
     return {"left_range": round(lr, 3), "mid_range": round(mr, 3),
             "right_range": round(rr, 3), "contractions": contractions,
-            "vol_dryup": vol_dryup}
+            "breakout_high": round(right_high, 2),
+            "vol_confirm": vol_confirm}
 
 
 def _detect_wyckoff(closes: list[float], vols: list[float]) -> dict | None:
@@ -275,15 +283,15 @@ def score(code: str) -> FactorScore:
             s += 5  # 缩量破位=洗盘, 反向加分
             detail["vol_breakdown"] = "缩量洗盘"
 
-    # VCP 强势入场 setup (Minervini SEPA, 强化 [A] 假设)
+    # VCP 强势入场 setup (Minervini SEPA, 强化 [A] 假设, 2026-07-01 加突破确认)
     vcp = _detect_vcp(closes, vols)
     if vcp:
-        if vcp["vol_dryup"]:
+        if vcp["vol_confirm"]:
             s += 12
-            detail["vcp_setup"] = f"VCP完整({vcp['contractions']}次收缩+缩量, 末{vcp['right_range']:.1f}%)"
+            detail["vcp_setup"] = f"VCP突破({vcp['contractions']}收缩+放量, 末{vcp['right_range']:.1f}%)"
         else:
             s += 6
-            detail["vcp_setup"] = f"VCP收缩({vcp['contractions']}次, 量未缩)"
+            detail["vcp_setup"] = f"VCP突破({vcp['contractions']}收缩, 量未放)"
 
     # Wyckoff 派发/吸筹 (强化 [J] 出货假设: 派发-10/吸筹+8)
     wyck = _detect_wyckoff(closes, vols)

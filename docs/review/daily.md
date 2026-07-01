@@ -199,6 +199,7 @@
 > *注: [D][E][F][G] 06-29当日即写入 knowledge/rules.yaml (教训直观, 提前固化作为默认规则). 但按"严格5工作日后回测"原则, 7-04起正式回测命中率, 不达标则修正/删除. 即"先用着, 后验证".
 
 ### 验证日志
+- 2026-07-01 **VCP detector 修正 (回测闭环)**: 加"当日突破right段高+放量1.3×"确认. 命中12137→4353 (2.8×严选), edge 从≈0→三horizon全正 (5日+0.17%/10日+0.34%/20日+0.23%). 胜率仍<base=突破型特征(少数大赢, 需紧止损骑赢家). VCP从"无edge"变"modest正edge", 弱于Turtle sys1但真实. scorer +12/+6保留. [A]假设索引⚠️可摘. 验证回路闭环: 回测发现→修正→重测确认. 全套261 passed.
 - 2026-07-01 **信号历史回测 (detector edge 验证)**: 建 `signal_backtest.py`, 5165只parquet扫5信号×3horizon. 诚实裁决 (详 docs/review/signal_validation.md):
   - ✅ **Turtle sys1(20日突破)真edge**: 10日horizon edge +1.00%/胜率51.8%(base+4.9pp)/中位+0.34% — 唯一分布性正期望, morning_scan的+5加分有据.
   - ⚠️ Turtle sys2(55日): 20日edge+0.85%但低胜率高方差(趋势型, 需宽止损长持有).
