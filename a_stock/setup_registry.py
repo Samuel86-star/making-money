@@ -44,6 +44,84 @@ def kelly_fraction(win_rate: float, payoff: float, fraction: float = 0.5,
     return min(f, cap)
 
 
+def _pair(fn1, fn2):
+    def f(c, v):
+        try:
+            return bool(fn1(c, v)) and bool(fn2(c, v))
+        except Exception:
+            return False
+    return f
+
+
+def _build_setup_fns():
+    """setup名 → signal_fn 映射 (供 detect_setup)."""
+    from a_stock.signal_backtest import (
+        signal_vcp, signal_wyckoff_accumulation, signal_wyckoff_distribution,
+        signal_turtle_sys1, signal_turtle_sys2)
+    return {
+        "VCP突破": signal_vcp,
+        "Wyckoff吸筹": signal_wyckoff_accumulation,
+        "Wyckoff派发": signal_wyckoff_distribution,
+        "Turtle sys1": signal_turtle_sys1,
+        "Turtle sys2": signal_turtle_sys2,
+        "sys1+Wyckoff吸筹": _pair(signal_turtle_sys1, signal_wyckoff_accumulation),
+        "sys2+Wyckoff吸筹": _pair(signal_turtle_sys2, signal_wyckoff_accumulation),
+        "sys1+VCP": _pair(signal_turtle_sys1, signal_vcp),
+    }
+
+
+SETUP_FNS = _build_setup_fns()
+
+
+def load_registry() -> dict:
+    """加载最新日期目录的 setup_registry.json → {setup_name: stats}. 无则 {}."""
+    if not cfg.DAILY_DIR.exists():
+        return {}
+    dates = sorted(d for d in cfg.DAILY_DIR.iterdir()
+                   if d.is_dir() and (d / "setup_registry.json").exists())
+    if not dates:
+        return {}
+    import json
+    try:
+        data = json.loads((dates[-1] / "setup_registry.json").read_text())
+        return {r["setup"]: r for r in data.get("registry", [])}
+    except Exception:
+        return {}
+
+
+def detect_setup(code: str, registry: dict | None = None) -> str | None:
+    """返回 code 当前命中的最高期望 setup (registry按expectancy降序遍历, 首命中).
+    无命中/无数据 → None."""
+    if registry is None:
+        registry = load_registry()
+    if not registry:
+        return None
+    import a_stock.ohlcv as ohlcv
+    try:
+        df = ohlcv.load_ohlcv(code)
+        if len(df) < 60:
+            return None
+    except Exception:
+        return None
+    ccol = "close" if "close" in df.columns else "Close"
+    vcol = "volume" if "volume" in df.columns else "Volume"
+    closes = df[ccol].astype(float).tolist()
+    vols = (df[vcol].astype(float).tolist() if vcol in df.columns
+            else [0.0] * len(closes))
+    # 按registry期望降序遍历命中的setup
+    ranked = sorted(registry.items(), key=lambda kv: kv[1].get("expectancy", 0), reverse=True)
+    for name, stats in ranked:
+        fn = SETUP_FNS.get(name)
+        if fn is None:
+            continue
+        try:
+            if fn(closes, vols):
+                return name
+        except Exception:
+            continue
+    return None
+
+
 # === setup → returns (复用 signal_backtest 全市场扫描) ===
 
 def _collect_setup_returns(signal_fn, forward_days=(10,), min_history=80,
@@ -71,32 +149,11 @@ def _collect_setup_returns(signal_fn, forward_days=(10,), min_history=80,
 
 def build_registry(stop_pct: float = 0.05, horizon: int = 10,
                    min_history: int = 80, sample=None) -> list[dict]:
-    """建edge库: 验证过的setup → expectancy + Kelly. 返回registry列表 (按expectancy降序)."""
-    from a_stock.signal_backtest import (
-        signal_vcp, signal_wyckoff_accumulation, signal_wyckoff_distribution,
-        signal_turtle_sys1, signal_turtle_sys2)
-
-    def _pair(fn1, fn2):
-        def f(c, v):
-            try:
-                return bool(fn1(c, v)) and bool(fn2(c, v))
-            except Exception:
-                return False
-        return f
-
-    setups = {
-        "VCP突破": signal_vcp,
-        "Wyckoff吸筹": signal_wyckoff_accumulation,
-        "Wyckoff派发(回避)": signal_wyckoff_distribution,
-        "Turtle sys1": signal_turtle_sys1,
-        "Turtle sys2": signal_turtle_sys2,
-        "★sys1+Wyckoff吸筹(主推)": _pair(signal_turtle_sys1, signal_wyckoff_accumulation),
-        "★sys2+Wyckoff吸筹": _pair(signal_turtle_sys2, signal_wyckoff_accumulation),
-        "sys1+VCP": _pair(signal_turtle_sys1, signal_vcp),
-    }
+    """建edge库: 验证过的setup → expectancy + Kelly. 返回registry列表 (按expectancy降序).
+    setup名与 SETUP_FNS 对齐 (供 detect_setup 查找)."""
     print(f"⏳ Build registry (止损{stop_pct:.0%}, horizon={horizon}d)")
     registry = []
-    for name, fn in setups.items():
+    for name, fn in SETUP_FNS.items():
         rets = _collect_setup_returns(fn, forward_days=(horizon,), min_history=min_history,
                                       stop_pct=stop_pct, sample=sample)[horizon]
         e = expectancy(rets)

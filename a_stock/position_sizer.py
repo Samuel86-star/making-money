@@ -39,7 +39,8 @@ def _vol_weighted(positions_vols: list[float]) -> list[float]:
 
 def suggest(c: Candidate, total_capital: float, method: str = "kelly",
             risk_per_trade: float = 0.01, kelly_fraction: float = 0.5,
-            score: float | None = None) -> dict:
+            score: float | None = None, setup: str | None = None,
+            registry: dict | None = None) -> dict:
     stop_pct = (c.price - c.stop_loss) / c.price
     target_pct = (c.target_price - c.price) / c.price
     payoff = target_pct / stop_pct if stop_pct > 0 else 0
@@ -48,12 +49,27 @@ def suggest(c: Candidate, total_capital: float, method: str = "kelly",
     reward_per_share = c.target_price - c.price
     r_multiple = reward_per_share / risk_per_share if risk_per_share > 0 else 0
 
+    # 凯利用的 win_rate/payoff: setup backtested 优先 (验证驱动sizing)
+    eff_win_rate = c.win_rate
+    eff_payoff = payoff
+    setup_note = ""
+    if setup:
+        if registry is None:
+            from a_stock.setup_registry import load_registry
+            registry = load_registry()
+        entry = registry.get(setup)
+        if entry:
+            eff_win_rate = entry.get("win_rate", c.win_rate)
+            eff_payoff = entry.get("payoff", payoff)
+            setup_note = (f" [setup={setup} 回测w{eff_win_rate:.0%}/b{eff_payoff:.2f} "
+                          f"E{entry.get('expectancy', 0):+.2%}]")
+
     if method == "kelly":
-        frac = _fractional_kelly(c.win_rate, payoff, kelly_fraction)
-        rationale = f"Kelly({c.win_rate:.0%}×{payoff:.2f})×{kelly_fraction}={frac:.1%}"
+        frac = _fractional_kelly(eff_win_rate, eff_payoff, kelly_fraction)
+        rationale = f"Kelly({eff_win_rate:.0%}×{eff_payoff:.2f})×{kelly_fraction}={frac:.1%}{setup_note}"
     elif method == "fixed":
         frac = _fixed_fractional(risk_per_trade, stop_pct)
-        rationale = f"固定风险 风险1R={risk_per_trade:.1%}资本/止损{stop_pct:.1%} 博{r_multiple:.1f}R"
+        rationale = f"固定风险 风险1R={risk_per_trade:.1%}资本/止损{stop_pct:.1%} 博{r_multiple:.1f}R{setup_note}"
     else:
         frac = 0.10
         rationale = "vol 不适用单标的"
@@ -75,7 +91,7 @@ def suggest(c: Candidate, total_capital: float, method: str = "kelly",
     return {
         "code": c.code, "name": c.name, "method": method,
         "rationale": rationale,
-        "score": score,
+        "score": score, "setup": setup,
         "suggested_frac": round(frac, 4),
         "suggested_amount": round(amount),
         "shares": shares,
@@ -87,6 +103,8 @@ def suggest(c: Candidate, total_capital: float, method: str = "kelly",
         "risk_per_share": round(risk_per_share, 4),
         "reward_per_share": round(reward_per_share, 4),
         "R_multiple": round(r_multiple, 2),
+        "backtested_win_rate": round(eff_win_rate, 4) if setup else None,
+        "backtested_payoff": round(eff_payoff, 2) if setup else None,
     }
 
 
