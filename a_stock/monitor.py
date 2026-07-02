@@ -208,17 +208,31 @@ def _ensure_monitor_log_table() -> None:
         """)
 
 
-def run(dry_run: bool = False) -> dict:
+def run(dry_run: bool = False, heartbeat: bool = False) -> dict:
     # 非阻塞锁: 上一次没跑完就跳过 (防任务堆积)
     if not _run_lock.acquire(blocking=False):
         return {"fired": 0, "rules_checked": 0, "error": "skipped_previous_running"}
     try:
-        return _run_impl(dry_run)
+        return _run_impl(dry_run, heartbeat)
     finally:
         _run_lock.release()
 
 
-def _run_impl(dry_run: bool) -> dict:
+def _heartbeat(holdings, prices, portfolio_change, fired) -> None:
+    """5min 心跳推送: 组合日内% + 持仓快照 + 触发数. 无条件 (有别于规则触发)."""
+    parts = []
+    for h in holdings:
+        code = h["code"]
+        if code not in prices:
+            continue
+        p = prices[code]
+        nm = (h.get("name") or code)[:4]
+        parts.append(f"{nm}{p['price']:.3f}{p.get('change_pct',0):+.1%}")
+    body = f"组合{portfolio_change:+.2f}% 触发{fired}条\n" + " | ".join(parts)
+    push("💓 5min心跳", body, sound=False)
+
+
+def _run_impl(dry_run: bool, heartbeat: bool = False) -> dict:
     try:
         _ensure_monitor_log_table()
         state = _load_state()
@@ -320,6 +334,13 @@ def _run_impl(dry_run: bool) -> dict:
         # === 异动检测 ===
         anomaly_fired = _check_anomalies(holdings, state, dry_run)
 
+        # === 心跳推送 (5min无条件状态, 有别于规则触发) ===
+        if heartbeat and not dry_run:
+            try:
+                _heartbeat(holdings, prices, portfolio_change, len(fired) + anomaly_fired)
+            except Exception as e:
+                _log_error("monitor", "heartbeat", e)
+
         state["last_run"] = datetime.now().isoformat()
         _save_state(state)
 
@@ -383,13 +404,16 @@ def _check_anomalies(holdings: list[dict], state: dict, dry_run: bool) -> int:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--heartbeat", action="store_true",
+                    help="5min心跳推送 (组合日内%+持仓快照, 无条件)")
     args = ap.parse_args()
-    result = run(args.dry_run)
+    result = run(args.dry_run, args.heartbeat)
     print(f"\n检查 {result.get('rules_checked', 0)} 规则, "
           f"持仓 {result.get('holdings', 0)} 只, "
           f"组合日内 {result.get('portfolio_change', 0):+.2f}%, "
           f"规则触发 {result['fired']} 条, "
-          f"异动触发 {result.get('anomaly_fired', 0)} 条")
+          f"异动触发 {result.get('anomaly_fired', 0)} 条"
+          + (" [心跳开]" if args.heartbeat else ""))
 
 
 if __name__ == "__main__":

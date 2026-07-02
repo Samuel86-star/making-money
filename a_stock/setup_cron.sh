@@ -17,7 +17,7 @@ CRON_MONITOR_CLOSE="5 15 * * 1-5"
 CRON_SCHEDULER="* 9-14 * * 1-5"
 CRON_SCHEDULER_PM="* 15 * * 1-5"
 
-CMD_MONITOR="cd $PROJECT_DIR && $PYTHON -m a_stock.monitor >> $LOG_DIR/monitor.log 2>&1"
+CMD_MONITOR="cd $PROJECT_DIR && $PYTHON -m a_stock.monitor --heartbeat >> $LOG_DIR/monitor.log 2>&1"
 CMD_SCHEDULER="cd $PROJECT_DIR && $PYTHON -m a_stock.scheduler run >> $LOG_DIR/scheduler.log 2>&1"
 
 case "${1:-status}" in
@@ -34,7 +34,7 @@ case "${1:-status}" in
      echo "$CRON_SCHEDULER_PM $CMD_SCHEDULER"
     ) | crontab -
     echo "✓ Cron v1.0 已安装:"
-    echo "  monitor:  9-11/13-14 每5分钟 + 15:05 (价格规则+异动)"
+    echo "  monitor:  9-11/13-14 每5分钟 + 15:05 (价格规则+异动+💓心跳)"
     echo "  scheduler: 9-15 每分钟 (早盘扫描9:35/9:50 + 盘后15:10)"
     echo "  日志: $LOG_DIR/{monitor,scheduler}.log"
     echo ""
