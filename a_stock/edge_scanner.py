@@ -33,8 +33,12 @@ def scan_for_setups(capital: float = 79938.0, stop_pct: float = 0.05,
                     min_expectancy: float | None = None) -> list[dict]:
     """扫全市场, 找当前命中验证setup的股, 出actionable sized建议.
 
+    价格优先用实时 (tencent_quote), 实时不可达回退parquet昨收 (rec标stale=True).
     stop_pct: 止损% (默认5, 回测甜区). cost_pct: round-trip成本 (默认0.3%).
-    min_expectancy: 净期望下限 (默认=cost_pct, 即净期望>0才推). 返回top_n."""
+    minexpectancy: 净期望下限 (默认=cost_pct, 即净期望>0才推). 返回top_n."""
+    from a_stock.a_stock_data.tencent import tencent_quote
+    import pandas as pd
+
     registry = load_registry()
     if not registry:
         print("⚠ registry空, 先跑 `python -m a_stock.setup_registry`")
@@ -43,26 +47,51 @@ def scan_for_setups(capital: float = 79938.0, stop_pct: float = 0.05,
         min_expectancy = cost_pct  # 净期望>0才值得 (覆盖成本)
 
     codes = [p.stem for p in cfg.OHLCV_DIR.glob("*.parquet")]
-    recs = []
-    import pandas as pd
+    # 1. 命中setup + 净期望过关 (此处不读价, 先筛)
+    matches = []  # (code, setup, stats, net_exp)
     for code in codes:
         try:
             setup = detect_setup(code, registry)
             if not setup:
                 continue
             stats = registry[setup]
-            # 净期望 (扣成本)
             net_exp = stats.get("expectancy", 0) - cost_pct
             if net_exp <= 0:
                 continue  # 成本吃光edge, 不推
-            df = pd.read_parquet(cfg.OHLCV_DIR / f"{code}.parquet")
-            ccol = "close" if "close" in df.columns else "Close"
-            price = float(df[ccol].iloc[-1])
-            if price <= 0:
-                continue
+            matches.append((code, setup, stats, net_exp))
+        except Exception:
+            continue
+    if not matches:
+        return []
+
+    # 2. 批量拉实时价 (一次网络); 缺失/无效回退parquet昨收
+    live = {}
+    try:
+        live = tencent_quote([m[0] for m in matches]) or {}
+    except Exception:
+        live = {}
+
+    recs = []
+    for code, setup, stats, net_exp in matches:
+        try:
+            q = live.get(code, {}) or {}
+            price = q.get("price")
+            name = q.get("name")
+            stale = not (price and float(price) > 0)
+            if stale:
+                # 回退parquet昨收 (盘中拉不到实时时兜底)
+                df = pd.read_parquet(cfg.OHLCV_DIR / f"{code}.parquet")
+                ccol = "close" if "close" in df.columns else "Close"
+                price = float(df[ccol].iloc[-1])
+                if price <= 0:
+                    continue
+            else:
+                price = float(price)
+            if not name:
+                name = _stock_name(code)
             stop = price * (1 - stop_pct)
             target = price * (1 + stats.get("payoff", 1.5) * stop_pct)
-            c = Candidate(code, _stock_name(code), price, target, stop,
+            c = Candidate(code, name, price, target, stop,
                           vol_annual=0.4, win_rate=stats.get("win_rate", 0.5))
             r = suggest(c, capital, method="kelly", kelly_fraction=0.5,
                         setup=setup, registry=registry)
@@ -72,6 +101,8 @@ def scan_for_setups(capital: float = 79938.0, stop_pct: float = 0.05,
             r["net_expectancy"] = round(net_exp, 4)
             r["kelly_frac"] = stats.get("kelly_frac", 0)
             r["setup"] = setup
+            r["stale"] = stale
+            r["price_source"] = "parquet昨收" if stale else "实时"
             recs.append(r)
         except Exception:
             continue
@@ -94,13 +125,16 @@ def main():
         print("无候选 (当前无setup命中, 或净期望≤成本). 先跑 setup_registry.")
         return
 
-    print(f"\n=== Edge Scanner 候选 (资本{args.capital:,.0f}/止损{args.stop}%/成本{args.cost}%) ===\n")
+    n_live = sum(1 for r in recs if not r.get("stale"))
+    print(f"\n=== Edge Scanner 候选 (资本{args.capital:,.0f}/止损{args.stop}%/成本{args.cost}%) ===")
+    print(f"(实时价 {n_live}/{len(recs)}, 余 parquet昨收标 ⚠陈旧)\n")
     print(f"{'代码':<8} {'名称':<10} {'setup':<20} {'现价':>7} {'止损':>7} {'目标':>7} "
           f"{'股数':>6} {'占比':>5} {'净期望':>6}")
     for r in recs:
+        mark = " ⚠陈旧" if r.get("stale") else ""
         print(f"{r['code']:<8} {r['name'][:10]:<10} {r['setup']:<20} "
               f"{r['entry']:>7.3f} {r['stop']:>7.3f} {r['target']:>7.3f} "
-              f"{r['shares']:>6} {r['actual_pct']:>4.1%} {r['net_expectancy']:>+5.2%}")
+              f"{r['shares']:>6} {r['actual_pct']:>4.1%} {r['net_expectancy']:>+5.2%}{mark}")
 
     out_dir = cfg.DAILY_DIR / date.today().isoformat()
     out_dir.mkdir(parents=True, exist_ok=True)
