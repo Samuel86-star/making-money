@@ -59,7 +59,10 @@ a_stock/
 ├── anomaly.py                  火箭发射/高台跳水
 ├── goal_sim.py                 蒙特卡洛目标概率
 ├── risk_metrics.py             组合风险 (Portfolio Heat/Sortino/板块冲击)
-├── position_sizer.py           凯利+固定风险+R倍数(Van Tharp) [P1]
+├── position_sizer.py           凯利+固定风险+R倍数(Van Tharp), setup→backtested Kelly [P1]
+├── setup_registry.py           ★新: edge库, 8setup expectancy+Kelly (验证→sizing)
+├── signal_backtest.py          ★新: 历史回测detector edge, 止损建模, confluence, pairs
+├── edge_scanner.py             ★新: 验证setup→今天买什么 (sized候选, 扣成本)
 ├── deep_research.py            DCF+Comps深研 (含 thesis_breakers)
 ├── backtest_hypothesis.py      技能假设回测 (满5工作日)
 ├── macro_calendar.py           宏观日历
@@ -68,6 +71,68 @@ a_stock/
 ├── db.py / config.py / ohlcv.py (atr/struct_stop_loss/vcp_score)
 └── a_stock_data/               东财push2/腾讯/同花顺/新浪财报
 ```
+
+## Edge 库 / 验证交易框架 (2026-07-02)
+
+> 18 commits 信号验证体系的核心结论. 全部数据驱动 (5165只parquet历史回测).
+> 详 `docs/review/signal_validation.md`. 老板焦虑P(达成)=0.2%的量化进攻路径.
+
+### 8 Setup 期望+Kelly 排名 (5%止损/10d/扣0.3%成本前)
+
+| setup | n | 胜率 | 赔率 | 期望/笔 | 半Kelly |
+|---|---|---|---|---|---|
+| **★sys1+Wyckoff吸筹** | 9000 | 47.2% | 1.99 | **+1.75%** | **10.3%** |
+| Turtle sys1 | 41071 | 42.3% | 2.04 | +1.22% | 7.0% |
+| sys1+VCP | 1363 | 31.6% | 2.82 | +0.97% | 3.6% |
+| Turtle sys2 | 45037 | 28.4% | 3.11 | +0.80% | 2.7% |
+| VCP突破 | 4470 | 30.1% | 2.84 | +0.74% | 2.7% |
+| Wyckoff吸筹 | 98751 | 37.9% | 2.07 | +0.72% | 3.9% |
+| Wyckoff派发(回避) | 86514 | 37.9% | 1.80 | +0.26% | 1.7% |
+
+### 验证硬结论 (改认知)
+
+| 维度 | 验证前 | 验证后 |
+|---|---|---|
+| VCP | 强化[A]主力 | 旧版无edge→加突破确认→modest正edge |
+| 止损 | 越紧越安全 | **3%=自残, 5%甜区** (实证铁律) |
+| 信号叠加 | 越多越好 | **恰好2信号最强, 3+失效** |
+| 单信号 | 各有edge | 多数≈base, 别重仓 |
+| sys2量过滤 | 量确认更稳 | **量确认毁sys2 edge** (拥挤交易) |
+| confluence来源 | 未拆 | **Turtle+Wyckoff对强, 含VCP对弱** |
+
+### 可倚交易框架 (实战部署)
+
+- **主推setup**: Turtle sys1 + Wyckoff吸筹 同日触发 (期望+1.75%/笔, 半Kelly 10%)
+- **止损**: 5% (3%自残, 实证)
+- **仓位**: 半Kelly, backtested参数 (position_sizer setup=)
+- **回避**: Wyckoff派发股, VCP单信号不重仓, 3+信号过热
+- **部署**: 69%现金分批, ~10%/笔, 2-3并发=20-30%新增, 总50-60%
+
+### 闭环工具链
+
+```
+morning_scan(选股+5信号+confluence) → signal_backtest(验证edge)
+→ setup_registry(8setup expectancy+Kelly) → detect_setup(命中)
+→ position_sizer(backtested Kelly) → edge_scanner(今天买什么, 扣成本)
+```
+
+### 关键命令
+
+```bash
+.venv/bin/python -m a_stock.signal_backtest --stop 5      # 信号edge (止损建模)
+.venv/bin/python -m a_stock.signal_backtest --confluence   # 2信号叠加
+.venv/bin/python -m a_stock.signal_backtest --pairs        # 子组合拆解
+.venv/bin/python -m a_stock.setup_registry                 # edge库 (Kelly仓位)
+.venv/bin/python -m a_stock.edge_scanner --top 15          # 今天买什么 (sized)
+```
+
+### 诚实局限
+
+- **涨市数据** (base rate正), 跌市表现未知 — 真考验待跌市样本
+- 交易成本0.3%/笔已扣 (edge_scanner/setup_registry净期望)
+- 假设[A]-[J] 07-06/07-07/07-08 日记回测仍待 (需交易日, 独立于detector验证)
+- 幸存者偏差 (parquet无退市, A股81-244日窗口小)
+
 
 ## cron 状态 ✅ (已安装)
 
@@ -131,11 +196,13 @@ cd /Users/maerun/Projects/make-money
 
 ## 当前最重要的 3 件事
 
-1. **下交易日盘前** — 跑 `scheduler session` + `morning_scan`, 验证 VCP/Wyckoff/super_zhuan 在候选上是否触发 (07-01 新增的 3 个因子首次实战)
-2. **PROJECT_STATE 资产回写** — 07-01 push2/腾讯 API 全空, 市值仍 06-29 口径; 下交易日盘前 `log cost` + 行情刷新后更新总资产
-3. **假设回测到点判定** — [D][E][F][G] 07-06 / [A][B][C] 07-07 / [J] 07-08 满 5 工作日, 到点跑 `backtest_hypothesis`
+1. **下交易日盘前** — 跑 `edge_scanner --top 15` 看 sys1+Wyckoff吸筹 候选 + `morning_scan` 验证新因子实战. 体系首战.
+2. **PROJECT_STATE 资产回写** — 07-01 push2/腾讯 API 全空, 市值仍 06-29 口径; 盘前 `log cost` + 行情刷新后更新总资产
+3. **假设回测到点判定** — [D][E][F][G] 07-06 / [A][B][C] 07-07 / [J] 07-08 满 5 工作日, 跑 `backtest_hypothesis` (日记setup层, 区别detector层已验)
 
 ## 决策日志
+
+- 2026-07-02 **验证→sizing闭环体系建成** (18 commits): signal_backtest(历史edge) → VCP修正(加突破确认) → 止损建模(3%自残/5%甜区, 实证铁律) → confluence(2信号最强+1.53%) → pairs拆解(sys1+Wyckoff吸筹workhorse) → setup_registry(8setup Kelly) → position_sizer接backtested Kelly → edge_scanner(今天买什么, 扣成本). 主推setup: sys1+Wyckoff吸筹 (期望+1.75%/笔, 半Kelly10%). 老板P(达成)=0.2%有完整量化进攻路径. 全套307 passed. 详 signal_validation.md + PROJECT_STATE "Edge库" 节.
 
 - 2026-06-29 清测试数据 + 装cron + 测试管道 → 周一开盘自动运行
 - 2026-06-29 首个交易日实战: 总资产 78,788→79,938 (+1,150/+1.46%, 进度79.9%). 已实现+67 (恒瑞52.67减100锁+355主功, 芯片1.615/1.545两次减仓锁+77, 创业板4.145浅止损-119, 东财20.05减200亏-246). 浮盈+303. 现金69%弹药充足.
