@@ -161,6 +161,30 @@
 **发现**: Spring-only和严版edge都比松版高 (缩窄提升质量). **但** — 松版虽单信号edge低, 它**燃料了confluence workhorse** (sys1+吸筹 n=8938). 缩到Spring-only会让该对样本暴跌, 是否仍强未测.
 **裁决**: **暂不改scorer的吸筹** (松版驱动confluence workhorse, 改它有连锁风险). Spring-only作为"高质量子信号"观察. 待confluence pair层级稳定后再定.
 
+## Setup Registry — edge库 (验证→sizing闭环, 2026-07-02)
+
+`a_stock/setup_registry.py`: 验证过的setup → expectancy + Kelly仓位. 5%止损/10d horizon:
+
+| setup | n | 胜率 | 赔率 | 期望/笔 | 半Kelly |
+|---|---|---|---|---|---|
+| **★sys1+Wyckoff吸筹** | 9000 | 47.2% | 1.99 | **+1.75%** | **10.3%** |
+| Turtle sys1 | 41071 | 42.3% | 2.04 | +1.22% | 7.0% |
+| sys1+VCP | 1363 | 31.6% | 2.82 | +0.97% | 3.6% |
+| Turtle sys2 | 45037 | 28.4% | 3.11 | +0.80% | 2.7% |
+| VCP突破 | 4470 | 30.1% | 2.84 | +0.74% | 2.7% |
+| Wyckoff吸筹 | 98751 | 37.9% | 2.07 | +0.72% | 3.9% |
+| Wyckoff派发(回避) | 86514 | 37.9% | 1.80 | +0.26% | 1.7% |
+
+**四大裁决 (连100k部署)**:
+1. **sys1+Wyckoff吸筹 = THE setup**: 最高期望+1.75%/笔, 半Kelly 10.3%/笔, 大样本n=9000稳. edge库主推条目.
+2. **5%止损下全setup正期望** — 即便VCP/Wyckoff派发都正 (止损驯服左尾). 所有信号可交易, 只是sizing不同.
+3. **Kelly分数适度 (1.7%-10.3%)** — 无setup该重仓, 最高10.3%. 满Kelly才~20%, 半Kelly纪律=10%.
+4. **直击69%现金部署**: 半Kelly ~10%/笔, 2-3并发setup=20-30%新增+现有31%=总50-60%. 分批理性部署路线, 非一把梭.
+
+**Expectancy公式**: E = win_rate×avg_win + (1-win_rate)×avg_loss. Kelly f*=(p·b−q)/b, b=payoff.
+
+**局限**: 涨市数据 (base正); 10d horizon≈2笔/月/setup频次; 未扣交易成本 (~0.3%/笔, 实战expectancy打八折).
+
 ## 待办 (按本次发现)
 
 - [ ] VCP detector 修正: 加突破确认 → 重跑回测 (高优先, 修 [A] 量化基础)
