@@ -111,11 +111,11 @@ rules:
     active: true
     note: "中线目标55, 触发考虑减仓"
 
-  - name: "恒瑞止损-破48"
+  - name: "恒瑞止损-破53(MA20锁利)"
     code: "600276"
-    condition: { field: "price", op: "<=", value: 48.0 }
+    condition: { field: "price", op: "<=", value: 53.0 }
     action: "reduce"
-    shares: 200
+    shares: 100
     max_trigger_per_day: 1
     cooldown_min: 0
     active: true
