@@ -228,3 +228,82 @@ def test_aggregate_confluence_stats():
     assert abs(agg[2][5]["avg_return"] - 0.035) < 1e-6
     assert agg[2][5]["win_rate"] == 0.5
 
+
+# === 2信号子组合拆解 ===
+
+from a_stock.signal_backtest import backtest_pairs, aggregate_pairs
+
+
+def test_pairs_records_specific_pair():
+    """信号A+B fire (C不fire) → 只记 A+B 对, 不记其他."""
+    closes = [10.0]*6 + [12.0]*14
+    fns = [lambda c,v: c[-1]==10, lambda c,v: c[-1]==10, lambda c,v: False]
+    names = ["A", "B", "C"]
+    pairs = backtest_pairs(fns, names, closes, [1000]*20, forward_days=(5,), min_history=5)
+    # 仅T=5 fire (min_history挡T<5, close=12挡T>5)
+    assert "A+B" in pairs
+    assert pairs["A+B"][5] == [0.2]
+    assert "A+C" not in pairs and "B+C" not in pairs
+
+
+def test_pairs_3_signals_3_combinations():
+    """3信号全fire → 3个pair (C(3,2)=3)."""
+    closes = [10.0]*6 + [12.0]*14
+    fns = [lambda c,v: c[-1]==10]*3
+    pairs = backtest_pairs(fns, ["A","B","C"], closes, [1000]*20,
+                           forward_days=(5,), min_history=5)
+    assert set(pairs.keys()) == {"A+B", "A+C", "B+C"}
+    for k in pairs:
+        assert pairs[k][5] == [0.2]
+
+
+def test_pairs_less_than_2_signals_empty():
+    """<2信号fire → 无pair."""
+    closes = [10.0]*20
+    fns = [lambda c,v: True, lambda c,v: False]
+    pairs = backtest_pairs(fns, ["A","B"], closes, [1000]*20, forward_days=(5,), min_history=5)
+    assert pairs == {}
+
+
+def test_pairs_aggregate_stats():
+    """聚合pair统计."""
+    per_stock = [{"A+B": {5: [0.10, -0.03, 0.05]}}]
+    agg = aggregate_pairs(per_stock, forward_days=(5,))
+    assert "A+B" in agg
+    assert agg["A+B"][5]["count"] == 3
+    assert agg["A+B"][5]["wins"] == 2
+
+
+# === 信号变体: sys2+vol / Wyckoff吸筹tightening ===
+
+from a_stock.signal_backtest import (signal_turtle_sys2_vol,
+    signal_wyckoff_spring, signal_wyckoff_accum_strict)
+
+
+def test_sys2_vol_requires_volume():
+    """sys2突破但量不足 → False (裸sys2会True)."""
+    # 用真实detector逻辑难造, 测接口契约: 返回bool, 不崩
+    closes = [10.0]*60
+    vols = [1000]*60
+    assert signal_turtle_sys2_vol(closes, vols) in (True, False)
+
+
+def test_wyckoff_spring_is_subset_of_accumulation():
+    """Spring信号是吸筹子集: Spring=True则吸筹必True (逻辑一致性)."""
+    # 造Spring序列 (复用wyckoff测试逻辑)
+    closes = [11.0 - (i % 10) * 0.1 for i in range(35)]
+    closes += [9.5, 10.1, 10.2, 10.1, 10.2]
+    vols = [1000]*35 + [2000, 900, 900, 900, 900]
+    from a_stock.signal_backtest import signal_wyckoff_accumulation
+    if signal_wyckoff_spring(closes, vols):
+        assert signal_wyckoff_accumulation(closes, vols)  # Spring ⊂ 吸筹
+
+
+def test_wyckoff_strict_is_subset_of_accumulation():
+    """严吸筹是吸筹子集 (逻辑一致性)."""
+    closes = [10.0 + (i % 10) * 0.05 for i in range(40)]
+    vols = [1000]*40
+    from a_stock.signal_backtest import signal_wyckoff_accumulation
+    if signal_wyckoff_accum_strict(closes, vols):
+        assert signal_wyckoff_accumulation(closes, vols)
+

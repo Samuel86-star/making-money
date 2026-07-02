@@ -167,6 +167,62 @@ def aggregate_confluence(per_stock_buckets: list, forward_days: tuple) -> dict:
             for k, ndict in merged.items()}
 
 
+# === 2信号子组合拆解 (哪对组合是confluence的edge来源) ===
+
+def backtest_pairs(signal_fns: list, signal_names: list, closes: list, vols: list,
+                   highs: list | None = None, lows: list | None = None,
+                   forward_days: tuple = (5, 10, 20),
+                   min_history: int = 60, stop_pct: float | None = None) -> dict:
+    """每T, 对所有fire的2-信号组合 (C(n,2)), 按pair记forward return.
+    pair_key = '+'.join(sorted([name_i, name_j])). 返回 {pair_key: {N: [returns]}}."""
+    from itertools import combinations
+    use_stop = stop_pct is not None and highs and lows
+    pairs: dict = {}
+    n = len(closes)
+    max_N = max(forward_days)
+    for T in range(min_history, n - max_N):
+        fired_idx = []
+        for i, fn in enumerate(signal_fns):
+            try:
+                if fn(closes[:T + 1], vols[:T + 1]):
+                    fired_idx.append(i)
+            except Exception:
+                pass
+        if len(fired_idx) < 2:
+            continue
+        entry = closes[T]
+        if entry <= 0:
+            continue
+        for i, j in combinations(fired_idx, 2):
+            key = "+".join(sorted([signal_names[i], signal_names[j]]))
+            pairs.setdefault(key, {N: [] for N in forward_days})
+            for N in forward_days:
+                if use_stop:
+                    ret = realized_return_with_stop(entry, highs[T + 1:T + 1 + N],
+                                                    lows[T + 1:T + 1 + N],
+                                                    closes[T + 1:T + 1 + N], stop_pct, N)
+                elif T + N < n:
+                    ret = (closes[T + N] - entry) / entry
+                else:
+                    ret = None
+                if ret is not None:
+                    pairs[key][N].append(ret)
+    return pairs
+
+
+def aggregate_pairs(per_stock_pairs: list, forward_days: tuple) -> dict:
+    """合并多股 pair → {pair_key: {N: stats}}."""
+    merged: dict = {}
+    for p in per_stock_pairs:
+        for key, ndict in p.items():
+            merged.setdefault(key, {N: [] for N in forward_days})
+            for N, rets in ndict.items():
+                if N in merged[key]:
+                    merged[key][N].extend(rets)
+    return {k: aggregate_stats([{N: v for N, v in ndict.items()}], forward_days)
+            for k, ndict in merged.items()}
+
+
 # === 信号包装 (detector → bool signal_fn) ===
 
 def signal_vcp(closes, vols):
@@ -196,12 +252,49 @@ def signal_turtle_sys2(closes, vols):
     return breakout_signal(closes) == "sys2_breakout"
 
 
+# === 信号变体 (2026-07: refinement研究) ===
+
+def signal_turtle_sys2_vol(closes, vols):
+    """sys2突破 + 当日量≥1.5×20日均 (volume确认). 研究: 量能过滤能否提升低胜率sys2."""
+    from a_stock.turtle import breakout_signal
+    if breakout_signal(closes) != "sys2_breakout":
+        return False
+    if len(vols) < 21:
+        return False
+    avg = sum(vols[-21:-1]) / 20
+    return avg > 0 and vols[-1] >= avg * 1.5
+
+
+def signal_wyckoff_spring(closes, vols):
+    """Wyckoff Spring only (假跌破+回升), 不含 vol_asymmetry. 研究: Spring是否比含vol_asym的吸筹edge更高."""
+    from a_stock.scorers.technical_scorer import _detect_wyckoff
+    w = _detect_wyckoff(closes, vols)
+    return w is not None and w["phase"] == "accumulation" and w["signal"] == "Spring"
+
+
+def signal_wyckoff_accum_strict(closes, vols):
+    """Wyckoff吸筹严版: Spring (本身强) OR vol_asymmetry ratio≤0.5 (严于默认0.67)."""
+    from a_stock.scorers.technical_scorer import _detect_wyckoff
+    w = _detect_wyckoff(closes, vols)
+    if not w or w["phase"] != "accumulation":
+        return False
+    if w["signal"] == "Spring":
+        return True
+    return w.get("vol_ratio", 1.0) <= 0.5
+
+
 SIGNALS = {
     "VCP(Minervini)": signal_vcp,
     "Wyckoff吸筹": signal_wyckoff_accumulation,
     "Wyckoff派发": signal_wyckoff_distribution,
     "Turtle sys1(20日突破)": signal_turtle_sys1,
     "Turtle sys2(55日突破)": signal_turtle_sys2,
+}
+
+VARIANTS = {
+    "Turtle sys2+量确认": signal_turtle_sys2_vol,
+    "Wyckoff Spring-only": signal_wyckoff_spring,
+    "Wyckoff吸筹(严)": signal_wyckoff_accum_strict,
 }
 
 
@@ -294,6 +387,60 @@ def run_confluence(forward_days=(5, 10, 20), min_history=80, sample=None,
     return buckets, br
 
 
+def run_pairs(forward_days=(5, 10, 20), min_history=80, sample=None,
+              stop_pct=None) -> tuple:
+    """全市场2信号子组合拆解. 返回 ({pair_key: {N: stats}}, base_rate)."""
+    codes = [p.stem for p in cfg.OHLCV_DIR.glob("*.parquet")]
+    if sample:
+        codes = codes[:sample]
+    names = list(SIGNALS.keys())
+    fns = list(SIGNALS.values())
+    mode = f"止损{stop_pct:.0%}" if stop_pct else "无止损"
+    print(f"⏳ Pairs 回测 {len(codes)} 只, {len(fns)}信号两两组合, {mode}")
+    loaded = []
+    for code in codes:
+        d = _load_parquet(code)
+        if d and len(d[0]) >= min_history + max(forward_days):
+            loaded.append(d)
+    print(f"  有效 {len(loaded)}/{len(codes)}")
+    per = [backtest_pairs(fns, names, c, v, h, lw, forward_days, min_history, stop_pct)
+           for c, v, h, lw in loaded]
+    pairs = aggregate_pairs(per, forward_days)
+    br_per = [backtest_signal(lambda x, y: True, c, v, forward_days, min_history,
+                              stop_pct=stop_pct, highs=h, lows=lw)
+              for c, v, h, lw in loaded]
+    br = aggregate_stats(br_per, forward_days)
+    return pairs, br
+
+
+def run_variants(forward_days=(5, 10, 20), min_history=80, sample=None,
+                 stop_pct=None) -> tuple:
+    """全市场变体对比 (VARIANTS + 原版). 返回 ({name: {N: stats}}, base_rate)."""
+    codes = [p.stem for p in cfg.OHLCV_DIR.glob("*.parquet")]
+    if sample:
+        codes = codes[:sample]
+    both = {**SIGNALS, **VARIANTS}
+    mode = f"止损{stop_pct:.0%}" if stop_pct else "无止损"
+    print(f"⏳ Variants 回测 {len(codes)} 只, {len(both)}信号(原+变体), {mode}")
+    loaded = []
+    for code in codes:
+        d = _load_parquet(code)
+        if d and len(d[0]) >= min_history + max(forward_days):
+            loaded.append(d)
+    print(f"  有效 {len(loaded)}/{len(codes)}")
+    out = {}
+    for name, fn in both.items():
+        per = [backtest_signal(fn, c, v, forward_days, min_history,
+                               stop_pct=stop_pct, highs=h, lows=lw)
+               for c, v, h, lw in loaded]
+        out[name] = aggregate_stats(per, forward_days)
+    br_per = [backtest_signal(lambda x, y: True, c, v, forward_days, min_history,
+                              stop_pct=stop_pct, highs=h, lows=lw)
+              for c, v, h, lw in loaded]
+    br = aggregate_stats(br_per, forward_days)
+    return out, br
+
+
 def main():
     ap = argparse.ArgumentParser(description="历史信号回测: detector forward-return edge")
     ap.add_argument("--horizon", type=int, nargs="+", default=[5, 10, 20])
@@ -301,10 +448,55 @@ def main():
     ap.add_argument("--sample", type=int, default=None, help="只取前N只 (调试)")
     ap.add_argument("--stop", type=float, default=None, help="止损% (如3=3%%), 启用止损建模")
     ap.add_argument("--confluence", action="store_true", help="多信号叠加模式")
+    ap.add_argument("--pairs", action="store_true", help="2信号子组合拆解")
+    ap.add_argument("--variants", action="store_true", help="信号变体对比(sys2+量/Wyckoff严)")
     args = ap.parse_args()
 
     fwd = tuple(args.horizon)
     stop = args.stop / 100 if args.stop else None
+
+    if args.pairs:
+        pairs, br = run_pairs(fwd, args.min_history, args.sample, stop)
+        mode = f"pairs[{f'止损{args.stop}%' if stop else '无止损'}]"
+        print(f"\n=== 2信号子组合 [{mode}] (base: "
+              + ", ".join(f"{N}日均={br[N]['avg_return']:+.2%}" for N in fwd if br.get(N)) + ") ===\n")
+        rows = []
+        for pair, stats in pairs.items():
+            s = stats.get(fwd[1]) if len(fwd) > 1 else stats.get(fwd[0])
+            if not s:
+                continue
+            b = br.get(fwd[1] if len(fwd) > 1 else fwd[0]) or {}
+            rows.append((pair, s, edge(s["avg_return"], b.get("avg_return", 0))))
+        rows.sort(key=lambda r: r[2], reverse=True)
+        print(f"{'信号对':<32} {'n':>7} {'胜率':>7} {'均值':>8} {'edge':>8} {'中位':>8}")
+        for pair, s, e in rows:
+            print(f"{pair:<32} {s['count']:>7} {s['win_rate']:>6.1%} "
+                  f"{s['avg_return']:>+7.2%} {e:>+7.2%} {s['median']:>+7.2%}")
+        out_dir = cfg.DAILY_DIR / date.today().isoformat()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        tag = f"_stop{args.stop}" if stop else ""
+        json.dump({"pairs": {k: v for k, v in pairs.items()}, "base_rate": br,
+                   "stop_pct": stop, "run_at": date.today().isoformat()},
+                  open(out_dir / f"pairs{tag}.json", "w"), ensure_ascii=False, indent=2)
+        print(f"\n✓ 落盘 {out_dir / f'pairs{tag}.json'}")
+        return
+
+    if args.variants:
+        out, br = run_variants(fwd, args.min_history, args.sample, stop)
+        mode = f"variants[{f'止损{args.stop}%' if stop else '无止损'}]"
+        print(f"\n=== 信号变体对比 [{mode}] (base: "
+              + ", ".join(f"{N}日均={br[N]['avg_return']:+.2%}" for N in fwd if br.get(N)) + ") ===\n")
+        N = fwd[1] if len(fwd) > 1 else fwd[0]
+        print(f"{'信号':<26} {'n':>8} {'胜率':>7} {'均值':>8} {'base':>8} {'edge':>8} {'中位':>8}")
+        for name, stats in out.items():
+            s = stats.get(N)
+            if not s:
+                continue
+            b = br.get(N) or {}
+            e = edge(s["avg_return"], b.get("avg_return", 0))
+            print(f"{name:<26} {s['count']:>8} {s['win_rate']:>6.1%} "
+                  f"{s['avg_return']:>+7.2%} {b.get('avg_return',0):>+7.2%} {e:>+7.2%} {s['median']:>+7.2%}")
+        return
 
     if args.confluence:
         buckets, br = run_confluence(fwd, args.min_history, args.sample, stop)

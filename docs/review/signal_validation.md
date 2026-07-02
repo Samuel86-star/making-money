@@ -121,6 +121,46 @@
 - 3+信号 = 警惕过热, 不追
 - 最优组合待拆 (VCP+Turtle? Turtle sys1+sys2? Wyckoff吸筹+VCP?) — 下次拆2信号子组合看哪个最强
 
+## 信号 refinement 三项研究 (2026-07-02)
+
+### 1. 2信号子组合拆解 (校准confluence boost)
+
+拆2信号bucket为具体对 (`backtest_pairs`, 10d horizon):
+
+| 信号对 | n | 胜率 | edge | 中位 |
+|---|---|---|---|---|
+| **Turtle sys1+Wyckoff吸筹** | **8938** | **57.3%** | **+1.69%** | **+1.18%** |
+| Turtle sys2+Wyckoff吸筹 | 36 | 55.6% | +2.49% | +1.54% (n小) |
+| Turtle sys1+Wyckoff派发 | 37 | 56.8% | +1.72% | +2.09% (n小) |
+| Turtle sys2+VCP | 1486 | 45.4% | +0.92% | -1.31% |
+| Turtle sys1+VCP | 1354 | 45.7% | +0.41% | -1.17% |
+| VCP+Wyckoff吸筹 | 681 | 45.5% | +0.21% | -1.09% |
+| VCP+Wyckoff派发 | 115 | 48.7% | -0.21% | -1.23% |
+
+**核心发现 — confluence edge不均匀, 看哪对**:
+- **Turtle+Wyckoff对 = 强** (中位正, 胜率>55%). **workhorse: sys1+Wyckoff吸筹** n=8938占2信号样本79%, edge+1.69%/胜率57.3%/中位+1.18% (大样本稳). 这是confluence edge的真正来源.
+- **含VCP对 = 弱** (中位全负, 胜率<base). VCP+Wyckoff派发甚至负edge.
+- **校准裁决**: morning_scan 当前"任意2信号+10"对**常见case(sys1+吸筹, 79%)校准正确**, 对罕见VCP对偏高. 选项: ①保持+10 (80%正确, 简单) ②pair-aware分级 (Turtle+Wyckoff+12, VCP对+4). 倾向① (复杂度不值, 罕见case).
+
+### 2. Turtle sys2 + 量确认 (反直觉)
+
+变体 `signal_turtle_sys2_vol`: sys2突破 + 当日量≥1.5×20日均:
+- sys2裸: edge +0.51% (10d)
+- **sys2+量确认: edge +0.01%** (n砍半23868) → **量确认毁了sys2的edge!**
+
+**解读**: 55日突破+放量 = 拥挤交易 (人人看见), 买入即套. sys2的edge来自**无量 quiet breakout** (少数人注意). 反直觉但数据明确.
+**裁决**: **不加量过滤到sys2**. sys2裸用.
+
+### 3. Wyckoff吸筹 tightening
+
+变体对比 (10d):
+- Wyckoff吸筹 (当前松版, Spring+vol_asym≤0.67): edge +0.19%, n=95447
+- **Wyckoff Spring-only** (只Spring假跌破): edge +0.34%, n=1778
+- **Wyckoff吸筹(严)** (Spring或vol_asym≤0.5): edge +0.31%, n=29788
+
+**发现**: Spring-only和严版edge都比松版高 (缩窄提升质量). **但** — 松版虽单信号edge低, 它**燃料了confluence workhorse** (sys1+吸筹 n=8938). 缩到Spring-only会让该对样本暴跌, 是否仍强未测.
+**裁决**: **暂不改scorer的吸筹** (松版驱动confluence workhorse, 改它有连锁风险). Spring-only作为"高质量子信号"观察. 待confluence pair层级稳定后再定.
+
 ## 待办 (按本次发现)
 
 - [ ] VCP detector 修正: 加突破确认 → 重跑回测 (高优先, 修 [A] 量化基础)
