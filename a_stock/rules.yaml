@@ -129,3 +129,33 @@ rules:
     cooldown_min: 240
     active: true
     note: "回踩1.85关注试仓, 纯卡脖子材料+装备链, 近20日+52%抗跌"
+
+  # === 2026-07-02 新仓 (体系首战 + ETF accumulation) ===
+  - name: "聚飞光电止损-破9.28(5% breakout失败)"
+    code: "300303"
+    condition: { field: "price", op: "<=", value: 9.28 }
+    action: "reduce"
+    shares: 400
+    max_trigger_per_day: 1
+    cooldown_min: 0
+    active: true
+    note: "sys1+Wyckoff吸筹breakout入场9.77, 5%甜区止损9.28(实证铁律), 破则全减400股"
+
+  - name: "聚飞光电止盈-到10.74(1.99R)"
+    code: "300303"
+    condition: { field: "price", op: ">=", value: 10.74 }
+    action: "info"
+    max_trigger_per_day: 1
+    cooldown_min: 0
+    active: true
+    note: "setup赔率1.99, 目标10.74(+10%), 到位考虑减半锁利留底仓"
+
+  - name: "半导体设备ETF止损-破1.30"
+    code: "560780"
+    condition: { field: "price", op: "<=", value: 1.30 }
+    action: "reduce"
+    shares: 800
+    max_trigger_per_day: 1
+    cooldown_min: 0
+    active: true
+    note: "4lot均成本1.365, 破1.30(全lot下方~4.8%)结构失败全减800. ETF勿日内浅止损(06-29教训), 破位再动"
