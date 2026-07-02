@@ -22,6 +22,11 @@ TZ = "Asia/Shanghai"
 # 东财限流(秒)
 EM_MIN_INTERVAL = float(os.environ.get("EM_MIN_INTERVAL", "1.0"))
 
+# Mac弹窗开关 (默认关: mac推送不好用, 改用会话内心跳通知).
+# cron数据管道照跑(落盘candidate_history/industry_flow), 只不弹窗.
+# 临时开: NOTIFY_ENABLED=1
+NOTIFY_ENABLED = os.environ.get("NOTIFY_ENABLED", "0") == "1"
+
 # Scoring weights(双策略,每策略总分 100)
 SCORING = {
     "short": {

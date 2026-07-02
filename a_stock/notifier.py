@@ -88,6 +88,10 @@ def push(title: str, body: str, subtitle: str = "",
          max_retries: int = 3) -> bool:
     """弹 Mac 通知, 带限流+重试. 返回是否成功.
     body 超长自动分段."""
+    # 静音开关 (cfg.NOTIFY_ENABLED=False 时只记日志不弹窗, 保留cron数据管道)
+    if not cfg.NOTIFY_ENABLED:
+        _log(title, body, False, "[muted]")
+        return False
     # 分段
     segments = _split_body(body, MAX_BODY_LEN)
 
