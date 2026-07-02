@@ -73,6 +73,26 @@ def _parse_offensive(out: str, top: int = 3) -> list[dict]:
     return rows[:top]
 
 
+def _sector_flow(top: int = 3) -> str:
+    """板块资金流(今日) top流入/流出. 拉取失败返回空串 (盘中push2抖动/盘后)."""
+    try:
+        from a_stock.a_stock_data.sectors import industry_fund_flow
+        d = industry_fund_flow(top_n=top)
+        inflow = (d.get("inflow_top") or [])[:top]
+        outflow = (d.get("outflow_top") or [])[:top]
+        if not inflow and not outflow:
+            return ""
+        fmt = lambda items: " ".join(f"{x['name']}{x['net_flow_yi']:+.0f}亿" for x in items)
+        line = "\n**板块资金流(今日)**\n"
+        if outflow:
+            line += f"- 🔴流出: {fmt(outflow)}\n"
+        if inflow:
+            line += f"- 🟢流入: {fmt(inflow)}\n"
+        return line
+    except Exception:
+        return ""
+
+
 def main():
     sess = trading_session()
     if not sess["can_trade"]:
@@ -125,6 +145,7 @@ def main():
         f"{pnl_s}元 | {_trend(pnl, p_pnl, '{:.0f}')} | {heat_s} | "
         f"{mon.get('trig', 0)} | {mon.get('anom', 0)} |\n",
     ]
+    out.append(_sector_flow())
 
     # ---- 持仓 ----
     out.append("\n| 代码 | 名称 | 现价 | 5min | 浮盈 |\n")
